@@ -1,0 +1,5 @@
+build
+*.vcd
+*.fst
+.venv
+__pycache__

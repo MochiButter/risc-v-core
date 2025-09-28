@@ -1,6 +1,6 @@
-VERILATOR_ARGS := --timing -j 0 --assert
-VERILATOR_ARGS += --trace-fst --trace-structs
-VERILATOR_ARGS += --main-top-name "-"
+VERILATOR_ARGS := --timing -j 0 --assert 
+VERILATOR_ARGS += --trace-fst --trace-structs 
+VERILATOR_ARGS += --main-top-name "-" 
 VERILATOR_ARGS += --x-assign unique --x-initial unique
 VERILATOR_ARGS += -Wall -Wno-fatal
 
@@ -24,7 +24,7 @@ verilator%: $(RTL_SOURCES) $(TB_SOURCES)
 	@mkdir -p build/verilator
 	verilator $(ROOT_DIR)/tb/verilator.vlt -Mdir build/verilator \
 		$(VERILATOR_ARGS) $(SIM_OPTS) -DDUMPFILE='"$@"' --binary \
-		$(call get_sources) $(TB_SOURCES) --top $(SIM_TOP)
+		$(call get_sources) $(TB_SOURCES) --top $(SIM_TOP) 
 	build/verilator/V$(SIM_TOP) +verilator+rand+reset+2
 
 iverilog%: $(RTL_SOURCES) $(TB_SOURCES)

@@ -1,0 +1,3 @@
+asm/*.bin
+results.xml
+sim_build

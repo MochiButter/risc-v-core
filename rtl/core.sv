@@ -34,8 +34,8 @@ module core
   wire [31:0] imm_w;
   logic [1:0] aluop_w;
   wire [1:0] jump_w;
-  wire [0:0] alu_use_imm_w, reg_wb_w, reg_lui_w, branch_w,
-    mem_read_w, mem_write_w, mem_to_reg_w;
+  wire [0:0] alu_use_imm_w, reg_wb_w, reg_lui_w, is_auipc_w,
+    branch_w, mem_read_w, mem_write_w, mem_to_reg_w;
 
   wire [2:0] funct3_w;
   wire [6:0] funct7_w;
@@ -150,6 +150,7 @@ module core
     .alu_use_imm_o(alu_use_imm_w),
     .reg_wb_o(reg_wb_w),
     .reg_lui_o(reg_lui_w),
+    .is_auipc_o(is_auipc_w),
     .branch_o(branch_w),
     .jump_o(jump_w),
     .mem_read_o(mem_read_w),
@@ -162,7 +163,7 @@ module core
     .funct7_i(funct7_w),
     .itype_i(alu_use_imm_w),
     .aluop_i(aluop_w),
-    .a_i(rs1_data_w),
+    .a_i(is_auipc_w ? inst_pc : rs1_data_w),
     .b_i(alu_use_imm_w ? imm_w : rs2_data_w),
     .res_o(alu_res_w),
     .zero_o(alu_zero_w)

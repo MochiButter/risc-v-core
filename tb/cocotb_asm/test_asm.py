@@ -159,6 +159,14 @@ async def test_branch(dut):
     assert dut.reg_inst.regs_q[5].get().to_unsigned()  == 3
     assert dut.reg_inst.regs_q[6].get().to_unsigned()  == 4
 
+@cocotb.test()
+async def test_branch(dut):
+    mem = []
+    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "extra.bin"))
+    await run_program(dut, filepath)
+    assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x12345000
+    assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x12345004
+
 def test_programs_runner():
     sim = os.getenv("SIM", "icarus")
 

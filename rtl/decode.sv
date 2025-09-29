@@ -5,6 +5,7 @@ module decode
   ,output [0:0] alu_use_imm_o
   ,output [0:0] reg_wb_o 
   ,output [0:0] reg_lui_o
+  ,output [0:0] is_auipc_o
   ,output [0:0] branch_o
   ,output [1:0] jump_o
   ,output [0:0] mem_read_o
@@ -39,13 +40,14 @@ module decode
   assign imm_u_w = {instr_i[31:12], 12'b0};
   assign imm_j_w = {{11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
 
-  logic [0:0] reg_wb_l, reg_lui_l, alu_use_imm_l, branch_l, mem_read_l, mem_write_l, mem_to_reg_l;
+  logic [0:0] reg_wb_l, reg_lui_l, is_auipc_l, alu_use_imm_l, branch_l, mem_read_l, mem_write_l, mem_to_reg_l;
   aluop_e aluop_l;
   logic [1:0] jump_l;
   logic [31:0] imm_l;
   always_comb begin
     reg_wb_l = 1'b0;
     reg_lui_l = 1'b0;
+    is_auipc_l = 1'b0;
     alu_use_imm_l = 1'b0;
     branch_l = 1'b0;
     jump_l = 2'b00;
@@ -102,13 +104,13 @@ module decode
         reg_lui_l = 1'b1;
         alu_use_imm_l = 1'b1;
         imm_l = imm_u_w;
-        aluop_l = Sleft;
       end
       OpAuipc: begin
         reg_wb_l = 1'b1;
         alu_use_imm_l = 1'b1;
         imm_l = imm_u_w;
-        aluop_l = Sleft;
+        is_auipc_l = 1'b1;
+        aluop_l = Add;
       end
       //OpEnv: begin
         // TODO
@@ -121,6 +123,7 @@ module decode
 
   assign reg_wb_o = reg_wb_l;
   assign reg_lui_o = reg_lui_l;
+  assign is_auipc_o = is_auipc_l;
   assign alu_use_imm_o = alu_use_imm_l;
   assign imm_o = imm_l;
   assign branch_o = branch_l;

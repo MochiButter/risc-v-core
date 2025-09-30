@@ -8,6 +8,7 @@ endif
 
 ROOT_DIR := $(PWD)/../..
 
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/alu32.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/decode.sv
@@ -29,7 +30,12 @@ CUSTOM_SIM_DEPS = asm/jump.bin asm/arithmetic.bin asm/load.bin asm/store.bin asm
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: clean_asm
+.PHONY: lint clean_asm
+
+lint: $(VERILOG_SOURCES)
+	verilator $(ROOT_DIR)/tb/verilator.vlt --lint-only --timing \
+		-top $(COCOTB_TOPLEVEL) $^ -Wall
+
 clean_asm:
 	rm -f asm/*.bin asm/*.elf
 

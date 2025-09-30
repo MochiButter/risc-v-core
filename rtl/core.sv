@@ -1,39 +1,36 @@
 /* Harvard arcchitecture
  */
 
-module core
+module core import core_pkg::*;
   (input clk_i
   ,input [0:0] rst_i
 
   ,input  [0:0]  instmem_ready_i
   ,output [0:0]  instmem_valid_o
-  ,output [31:0] instmem_addr_o
-  ,output [31:0] instmem_wdata_o
-  ,output [3:0]  instmem_wmask_o
-  ,input  [31:0] instmem_rdata_i
+  ,output [Xlen - 1:0] instmem_addr_o
+  ,output [Ilen - 1:0] instmem_wdata_o
+  ,output [(Ilen / 8) - 1:0]  instmem_wmask_o
+  ,input  [Ilen - 1:0] instmem_rdata_i
   ,input  [0:0]  instmem_rvalid_i
 
   ,input  [0:0]  datamem_ready_i
   ,output [0:0]  datamem_valid_o
-  ,output [31:0] datamem_addr_o
-  ,output [31:0] datamem_wdata_o
-  ,output [3:0]  datamem_wmask_o
-  ,input  [31:0] datamem_rdata_i
+  ,output [Xlen - 1:0] datamem_addr_o
+  ,output [Xlen - 1:0] datamem_wdata_o
+  ,output [(Xlen / 8 ) - 1:0]  datamem_wmask_o
+  ,input  [Xlen - 1:0] datamem_rdata_i
   ,input  [0:0]  datamem_rvalid_i
   );
 
-  typedef enum logic [1:0] {
-    Add, Sleft, Branch, Funct
-  } aluop_e;
-
   /* Instruction fetch fifo signals */
   logic [0:0] inst_valid;
-  wire [31:0] inst_pc, inst_data;
+  wire [Xlen - 1:0] inst_pc;
+  wire [Ilen - 1:0] inst_data;
 
   /* Decode signals */
   wire [31:0] imm_w;
-  logic [1:0] aluop_w;
-  wire [1:0] jump_w;
+  aluop_e aluop_w;
+  jump_type_e jump_w;
   wire [0:0] alu_use_imm_w, reg_wb_w, reg_lui_w, is_auipc_w,
     branch_w, mem_read_w, mem_write_w, mem_to_reg_w;
 
@@ -49,27 +46,26 @@ module core
 
   /* ALU signals */
   wire [0:0] alu_zero_w;
-  wire [31:0] alu_res_w;
+  wire [Xlen - 1:0] alu_res_w;
 
   /* Register signals */
-  wire [31:0] rs1_data_w, rs2_data_w;
-  logic [31:0] rd_data_w;
+  wire [Xlen - 1:0] rs1_data_w, rs2_data_w;
+  logic [Xlen - 1:0] rd_data_w;
 
   /* Data memory signals */
   wire [0:0] load_valid_w, mem_busy_w;
-  wire [31:0] load_data_w;
+  wire [Xlen - 1:0] load_data_w;
 
   /* Program counter signals */
   logic [0:0] fifo_rd_ready;
-  logic [63:0] fifo_wr_data, fifo_rd_data;
+  logic [(Xlen + Ilen) - 1:0] fifo_wr_data, fifo_rd_data;
 
   wire [0:0] fifo_wr_ready, fifo_flush, fifo_rst;
 
-  logic [31:0] pc_request_d, pc_request_q, pc_d, pc_q;
+  logic [Xlen - 1:0] pc_request_d, pc_request_q, pc_d, pc_q;
 
-  // TODO make jump type an enum
   // really long comb chain?
-  assign fifo_flush = inst_valid && (jump_w != 2'b00 || (branch_w && alu_zero_w));
+  assign fifo_flush = inst_valid && (jump_w != None || (branch_w && alu_zero_w));
   assign fifo_rst = rst_i || fifo_flush;
 
   // don't fetch until memop is done
@@ -78,10 +74,10 @@ module core
   assign instmem_wdata_o = 'x;
   assign instmem_wmask_o = '0;
   
-  wire [31:0] jalr_slice = {alu_res_w[31:1], 1'b0};
+  wire [Xlen - 1:0] jalr_slice = {alu_res_w[Xlen - 1:1], 1'b0};
 
   always_comb begin
-    if (fifo_flush && jump_w == 2'b10) begin 
+    if (fifo_flush && jump_w == Jalr) begin
       // jalr
       pc_d = jalr_slice;
     end else if (fifo_flush) begin
@@ -113,14 +109,14 @@ module core
     end
   end
 
-  assign inst_pc = fifo_rd_data[63:32];
-  assign inst_data = fifo_rd_data[31:0];
+  assign inst_pc = fifo_rd_data[(Xlen + Ilen) - 1:Xlen];
+  assign inst_data = fifo_rd_data[Ilen - 1:0];
 
   assign fifo_wr_data = {pc_request_q, instmem_rdata_i};
   // dispatch new instr when the fifo is not empty and the current mem op is done
   assign fifo_rd_ready = !mem_busy_w;
 
-  fifo #(.DepthLog2(2), .Width(64)) fifo_inst (
+  fifo #(.DepthLog2(2), .Width(Xlen + Ilen)) fifo_inst (
     .clk_i(clk_i),
     .rst_i(fifo_rst),
     .wr_valid_i(instmem_rvalid_i),
@@ -136,7 +132,7 @@ module core
       rd_data_w = load_data_w;
     end else if (reg_lui_w) begin
       rd_data_w = imm_w;
-    end else if (jump_w != 2'b00) begin
+    end else if (jump_w != None) begin
       rd_data_w = inst_pc + 32'd4;
     end else begin
       rd_data_w = alu_res_w;

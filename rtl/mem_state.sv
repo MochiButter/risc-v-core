@@ -1,24 +1,24 @@
-module mem_state
+module mem_state import core_pkg::*;
   (input [0:0] clk_i
   ,input [0:0] rst_i
 
   /* From core */
   ,input [0:0] read_i // S type
   ,input [0:0] write_i // I type opcode 3
-  ,input [31:0] addr_i // rs1 + imm
-  ,input [31:0] wdata_i // S type r2
+  ,input [Xlen - 1:0] addr_i // rs1 + imm
+  ,input [Xlen - 1:0] wdata_i // S type r2
   ,input [2:0] funct3_i
-  ,output [31:0] rdata_o // I type rd
+  ,output [Xlen - 1:0] rdata_o // I type rd
   ,output [0:0] rvalid_o // is read data valid
   ,output [0:0] mem_busy_o
 
   /* To data memory */
   ,input [0:0] mem_ready_i
   ,output [0:0] mem_valid_o
-  ,output [31:0] mem_addr_o
-  ,output [31:0] mem_wdata_o
-  ,output [3:0] mem_wmask_o
-  ,input [31:0] mem_rdata_i
+  ,output [Xlen - 1:0] mem_addr_o
+  ,output [Xlen - 1:0] mem_wdata_o
+  ,output [(Xlen / 8) - 1:0] mem_wmask_o
+  ,input [Xlen - 1:0] mem_rdata_i
   ,input[0:0] mem_rvalid_i
   );
 
@@ -29,12 +29,12 @@ module mem_state
   mem_state_e state_d, state_q;
   logic [0:0] mem_valid_l, rvalid_l, mem_busy_l;
 
-  logic [3:0] wmask_d, wmask_q;
-  logic [31:0] addr_d, addr_q, wdata_d, wdata_q;
-  logic [31:0] rdata_l;
+  logic [(Xlen / 8) - 1:0] wmask_d, wmask_q;
+  logic [Xlen - 1:0] addr_d, addr_q, wdata_d, wdata_q;
+  logic [Xlen - 1:0] rdata_l;
 
-  wire [31:0] rdata_byte_0, rdata_byte_1, rdata_byte_2, rdata_byte_3;
-  wire [31:0] rdata_half_0, rdata_half_2;
+  wire [Xlen - 1:0] rdata_byte_0, rdata_byte_1, rdata_byte_2, rdata_byte_3;
+  wire [Xlen - 1:0] rdata_half_0, rdata_half_2;
   wire [1:0] addr_i_byte, addr_q_byte, funct3_loadbyte;
   wire [0:0] sign_extend;
 

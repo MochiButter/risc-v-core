@@ -1,19 +1,15 @@
-module alu32
+module alu32 import core_pkg::*;
   (input [2:0] funct3_i
   ,input [6:0] funct7_i
   ,input [0:0] itype_i
-  ,input [1:0] aluop_i
-  ,input [31:0] a_i // should be rs1 or pc
-  ,input [31:0] b_i // should be rs2 or imm
-  ,output [31:0] res_o
+  ,input aluop_e aluop_i
+  ,input [Xlen - 1:0] a_i // should be rs1 or pc
+  ,input [Xlen - 1:0] b_i // should be rs2 or imm
+  ,output [Xlen - 1:0] res_o
   ,output [0:0] zero_o
   );
 
-  typedef enum logic [1:0] {
-    Add, Sleft, Branch, Funct
-  } aluop_e;
-
-  wire [31:0] add_w, sub_w, xor_w, or_w, and_w, sll_w, srl_w, sra_w;
+  wire [Xlen - 1:0] add_w, sub_w, xor_w, or_w, and_w, sll_w, srl_w, sra_w;
   wire [0:0] slt_w, sltu_w;
   assign add_w  = a_i + b_i;
   assign sub_w  = a_i - b_i;
@@ -29,7 +25,7 @@ module alu32
   wire [0:0] sub_reduce;
   assign sub_reduce = |sub_w;
 
-  logic [31:0] res_l;
+  logic [Xlen - 1:0] res_l;
   logic [0:0] zero_l;
   always_comb begin
     res_l = 'x;

@@ -1,7 +1,7 @@
-module decode
-  (input [31:0] instr_i
+module decode import core_pkg::*;
+  (input [Ilen - 1:0] instr_i
   ,output [31:0] imm_o
-  ,output [1:0] aluop_o
+  ,output aluop_e aluop_o
   ,output [0:0] alu_use_imm_o
   ,output [0:0] reg_wb_o 
   ,output [0:0] reg_lui_o
@@ -12,10 +12,6 @@ module decode
   ,output [0:0] mem_write_o
   ,output [0:0] mem_to_reg_o
   );
-
-  typedef enum logic [1:0] {
-    Add, Sleft, Branch, Funct
-  } aluop_e;
 
   typedef enum logic [6:0] {
     OpALU    = 7'b0110011,
@@ -42,7 +38,7 @@ module decode
 
   logic [0:0] reg_wb_l, reg_lui_l, is_auipc_l, alu_use_imm_l, branch_l, mem_read_l, mem_write_l, mem_to_reg_l;
   aluop_e aluop_l;
-  logic [1:0] jump_l;
+  jump_type_e jump_l;
   logic [31:0] imm_l;
   always_comb begin
     reg_wb_l = 1'b0;
@@ -50,7 +46,7 @@ module decode
     is_auipc_l = 1'b0;
     alu_use_imm_l = 1'b0;
     branch_l = 1'b0;
-    jump_l = 2'b00;
+    jump_l = None;
     mem_read_l = 1'b0;
     mem_write_l = 1'b0;
     mem_to_reg_l = 1'b0;
@@ -90,14 +86,14 @@ module decode
         reg_wb_l = 1'b1;
         imm_l = imm_j_w;
         aluop_l = Add;
-        jump_l = 2'b01;
+        jump_l = Jal;
       end
       OpJalr: begin
         reg_wb_l = 1'b1;
         alu_use_imm_l = 1'b1;
         imm_l = imm_i_w;
         aluop_l = Add;
-        jump_l = 2'b10;
+        jump_l = Jalr;
       end
       OpLui: begin
         reg_wb_l = 1'b1;

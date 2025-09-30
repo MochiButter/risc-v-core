@@ -19,9 +19,9 @@ module fifo
   ,output logic               rd_valid_o
   );
 
-  if (DepthLog2 < 1) begin
+  if (DepthLog2 < 1) begin : l_depth_warning
     $error("Fifo must have depth of at least 2; use pipeline_reg instead.");
-  end
+  end : l_depth_warning
 
   localparam Depth = (1 << DepthLog2);
 

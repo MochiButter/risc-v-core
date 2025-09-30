@@ -36,6 +36,9 @@ lint: $(VERILOG_SOURCES)
 	verilator $(ROOT_DIR)/tb/verilator.vlt --lint-only --timing \
 		-top $(COCOTB_TOPLEVEL) $^ -Wall
 
+svlint: $(VERILOG_SOURCES)
+	svlint --config $(ROOT_DIR)/tb/lowrisc_style.toml $^
+
 clean_asm:
 	rm -f asm/*.bin asm/*.elf
 

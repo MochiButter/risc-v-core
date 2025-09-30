@@ -22,7 +22,7 @@ module mem_state import core_pkg::*;
   ,input  logic mem_rvalid_i
   );
 
-  typedef enum {
+  typedef enum logic [1:0] {
     Idle, WaitForMem, WaitForValid
   } mem_state_e;
 

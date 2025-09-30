@@ -44,6 +44,9 @@ lint: $(RTL_SOURCES) $(TB_SOURCES)
 	verilator $(ROOT_DIR)/tb/verilator.vlt --lint-only --timing \
 		$(SIM_OPTS) -top $(SIM_TOP) $^ -Wall
 
+svlint: $(RTL_SOURCES)
+	svlint --config $(ROOT_DIR)/tb/lowrisc_style.toml $(RTL_SOURCES)
+
 clean:
 	rm -rf build
 	rm -f *.vcd

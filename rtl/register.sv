@@ -8,15 +8,16 @@
 module register
   #(parameter RegWidth = 32,
     parameter RegDepth = 32)
-  (input [0:0] clk_i
-  ,input [0:0] rst_i
-  ,input [$clog2(RegDepth) - 1:0] rs1_addr_i
-  ,input [$clog2(RegDepth) - 1:0] rs2_addr_i
-  ,input [$clog2(RegDepth) - 1:0] rd_addr_i
-  ,input [RegWidth - 1:0] rd_data_i
-  ,input [0:0] rd_wr_en_i
-  ,output [RegWidth - 1:0] rs1_data_o
-  ,output [RegWidth - 1:0] rs2_data_o
+  (input logic clk_i
+  ,input logic rst_i
+
+  ,input  logic [$clog2(RegDepth) - 1:0] rs1_addr_i
+  ,input  logic [$clog2(RegDepth) - 1:0] rs2_addr_i
+  ,input  logic [$clog2(RegDepth) - 1:0] rd_addr_i
+  ,input  logic [RegWidth - 1:0]         rd_data_i
+  ,input  logic                          rd_write_en_i
+  ,output logic [RegWidth - 1:0]         rs1_data_o
+  ,output logic [RegWidth - 1:0]         rs2_data_o
   );
 
   logic [RegWidth - 1:0] regs_q [RegDepth - 1:1];
@@ -43,7 +44,7 @@ module register
         regs_q[i] <= '0;
       end
     // don't let writes to x0 happen (there is no register there anyways)
-    end else if (rd_wr_en_i & (rd_addr_i != '0)) begin
+    end else if (rd_write_en_i && (rd_addr_i != '0)) begin
       regs_q[rd_addr_i] <= rd_data_i;
     end
   end

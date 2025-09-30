@@ -1,6 +1,7 @@
 -include ../common.mk
 
-RTL_SOURCES := $(RTL_DIR)/register.sv \
+RTL_SOURCES := $(RTL_DIR)/core_pkg.sv \
+							 $(RTL_DIR)/register.sv \
 					 		 $(RTL_DIR)/decode.sv \
 					     $(RTL_DIR)/alu32.sv \
 					     $(RTL_DIR)/mem_state.sv \

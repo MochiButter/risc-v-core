@@ -62,7 +62,7 @@ module core_tb();
     .valid_i(mem_valid_l),
     .addr_i(mem_addr_l[7:0]),
     .wr_data_i(mem_wdata_l),
-    .wr_en_i(mem_wmask_l),
+    .wmask_i(mem_wmask_l),
     .rd_data_o(mem_rdata_l),
     .rd_valid_o(mem_rvalid_l)
   );
@@ -75,7 +75,7 @@ module core_tb();
     .valid_i(datamem_valid_l),
     .addr_i(datamem_addr_l[7:0]),
     .wr_data_i(datamem_wdata_l),
-    .wr_en_i(datamem_wmask_l),
+    .wmask_i(datamem_wmask_l),
     .rd_data_o(datamem_rdata_l),
     .rd_valid_o(datamem_rvalid_l)
   );

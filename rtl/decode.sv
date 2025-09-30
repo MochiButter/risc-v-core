@@ -1,16 +1,16 @@
 module decode import core_pkg::*;
-  (input [Ilen - 1:0] instr_i
-  ,output [31:0] imm_o
-  ,output aluop_e aluop_o
-  ,output [0:0] alu_use_imm_o
-  ,output [0:0] reg_wb_o 
-  ,output [0:0] reg_lui_o
-  ,output [0:0] is_auipc_o
-  ,output [0:0] branch_o
-  ,output [1:0] jump_o
-  ,output [0:0] mem_read_o
-  ,output [0:0] mem_write_o
-  ,output [0:0] mem_to_reg_o
+  (input  logic [Ilen - 1:0] instr_i
+  ,output logic [31:0]       imm_o
+  ,output logic [1:0]        aluop_o
+  ,output logic              alu_use_imm_o
+  ,output logic              reg_wb_o
+  ,output logic              reg_lui_o
+  ,output logic              is_auipc_o
+  ,output logic              branch_o
+  ,output logic [1:0]        jump_o
+  ,output logic              mem_read_o
+  ,output logic              mem_write_o
+  ,output logic              mem_to_reg_o
   );
 
   typedef enum logic [6:0] {
@@ -26,87 +26,83 @@ module decode import core_pkg::*;
     OpEnv    = 7'b1110011
   } opcode_e;
 
-  wire [6:0] opcode_w;
-  assign opcode_w = instr_i[6:0];
+  logic [6:0] opcode;
+  assign opcode = instr_i[6:0];
 
-  wire [31:0] imm_i_w, imm_s_w, imm_b_w, imm_u_w, imm_j_w;
-  assign imm_i_w = {{20{instr_i[31]}}, instr_i[31:20]};
-  assign imm_s_w = {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
-  assign imm_b_w = {{19{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
-  assign imm_u_w = {instr_i[31:12], 12'b0};
-  assign imm_j_w = {{11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
+  logic [31:0] imm_i, imm_s, imm_b, imm_u, imm_j;
+  assign imm_i = {{20{instr_i[31]}}, instr_i[31:20]};
+  assign imm_s = {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
+  assign imm_b = {{19{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
+  assign imm_u = {instr_i[31:12], 12'b0};
+  assign imm_j = {{11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
 
-  logic [0:0] reg_wb_l, reg_lui_l, is_auipc_l, alu_use_imm_l, branch_l, mem_read_l, mem_write_l, mem_to_reg_l;
-  aluop_e aluop_l;
-  jump_type_e jump_l;
-  logic [31:0] imm_l;
   always_comb begin
-    reg_wb_l = 1'b0;
-    reg_lui_l = 1'b0;
-    is_auipc_l = 1'b0;
-    alu_use_imm_l = 1'b0;
-    branch_l = 1'b0;
-    jump_l = None;
-    mem_read_l = 1'b0;
-    mem_write_l = 1'b0;
-    mem_to_reg_l = 1'b0;
-    aluop_l = Add;
-    imm_l = '0;
-    case (opcode_w)
+    reg_wb_o = 1'b0;
+    reg_lui_o = 1'b0;
+    is_auipc_o = 1'b0;
+    alu_use_imm_o = 1'b0;
+    branch_o = 1'b0;
+    jump_o = None;
+    mem_read_o = 1'b0;
+    mem_write_o = 1'b0;
+    mem_to_reg_o = 1'b0;
+    aluop_o = Add;
+    imm_o = '0;
+    case (opcode)
       OpALU: begin
-        reg_wb_l = 1'b1;
-        aluop_l = Funct;
+        reg_wb_o = 1'b1;
+        aluop_o = Funct;
       end
       OpALUImm: begin
-        reg_wb_l = 1'b1;
-        aluop_l = Funct;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_i_w;
+        reg_wb_o = 1'b1;
+        aluop_o = Funct;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_i;
       end
       OpLoad: begin
-        reg_wb_l = 1'b1;
-        mem_read_l = 1'b1;
-        mem_to_reg_l = 1'b1;
-        aluop_l = Add;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_i_w;
+        reg_wb_o = 1'b1;
+        mem_read_o = 1'b1;
+        mem_to_reg_o = 1'b1;
+        aluop_o = Add;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_i;
       end
       OpStore: begin
-        mem_write_l = 1'b1;
-        aluop_l = Add;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_s_w;
+        mem_write_o = 1'b1;
+        aluop_o = Add;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_s;
       end
       OpBranch: begin
-        branch_l = 1'b1;
-        aluop_l = Branch;
-        imm_l = imm_b_w;
+        branch_o = 1'b1;
+        aluop_o = Branch;
+        imm_o = imm_b;
       end
       OpJal: begin
-        reg_wb_l = 1'b1;
-        imm_l = imm_j_w;
-        aluop_l = Add;
-        jump_l = Jal;
+        reg_wb_o = 1'b1;
+        imm_o = imm_j;
+        aluop_o = Add;
+        jump_o = Jal;
       end
       OpJalr: begin
-        reg_wb_l = 1'b1;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_i_w;
-        aluop_l = Add;
-        jump_l = Jalr;
+        reg_wb_o = 1'b1;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_i;
+        aluop_o = Add;
+        jump_o = Jalr;
       end
       OpLui: begin
-        reg_wb_l = 1'b1;
-        reg_lui_l = 1'b1;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_u_w;
+        reg_wb_o = 1'b1;
+        reg_lui_o = 1'b1;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_u;
       end
       OpAuipc: begin
-        reg_wb_l = 1'b1;
-        alu_use_imm_l = 1'b1;
-        imm_l = imm_u_w;
-        is_auipc_l = 1'b1;
-        aluop_l = Add;
+        reg_wb_o = 1'b1;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_u;
+        is_auipc_o = 1'b1;
+        aluop_o = Add;
       end
       //OpEnv: begin
         // TODO
@@ -116,16 +112,4 @@ module decode import core_pkg::*;
       end
     endcase
   end
-
-  assign reg_wb_o = reg_wb_l;
-  assign reg_lui_o = reg_lui_l;
-  assign is_auipc_o = is_auipc_l;
-  assign alu_use_imm_o = alu_use_imm_l;
-  assign imm_o = imm_l;
-  assign branch_o = branch_l;
-  assign jump_o = jump_l;
-  assign mem_read_o = mem_read_l;
-  assign mem_write_o = mem_write_l;
-  assign aluop_o = aluop_l;
-  assign mem_to_reg_o = mem_to_reg_l;
 endmodule

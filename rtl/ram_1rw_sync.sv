@@ -18,16 +18,16 @@ module ram_1rw_sync
   ,parameter UseInitFile = 0
   ,parameter InitFile = {`BINPATH, "rtl/program.mem"}
   )
-  (input [0:0] clk_i
+  (input logic clk_i
 
-  ,output [0:0] ready_o
-  ,input [0:0] valid_i
-  ,input [$clog2(Depth) - 1:0] addr_i
-  ,input [Width - 1:0] wr_data_i
-  ,input [(Width / 8) - 1:0] wr_en_i // 0 for rd, then write mask for wr
+  ,output logic                       ready_o
+  ,input  logic                       valid_i
+  ,input  logic [$clog2(Depth) - 1:0] addr_i
+  ,input  logic [Width - 1:0]         wr_data_i
+  ,input  logic [(Width / 8) - 1:0]   wmask_i // 0 for rd, then write mask for wr
 
-  ,output [Width - 1:0] rd_data_o
-  ,output [0:0] rd_valid_o
+  ,output logic [Width - 1:0] rd_data_o
+  ,output logic               rd_valid_o
   );
 
   logic [Width - 1:0] mem [0:Depth - 1];
@@ -50,10 +50,10 @@ module ram_1rw_sync
     if (valid_i) begin
       rd_data_q <= mem[addr_i >> 2];
       rd_valid_q <= 1'b1;
-      if (wr_en_i[0]) mem[addr_i >> 2][7:0] <= wr_data_i[7:0];
-      if (wr_en_i[1]) mem[addr_i >> 2][15:8] <= wr_data_i[15:8];
-      if (wr_en_i[2]) mem[addr_i >> 2][23:16] <= wr_data_i[23:16];
-      if (wr_en_i[3]) mem[addr_i >> 2][31:24] <= wr_data_i[31:24];
+      if (wmask_i[0]) mem[addr_i >> 2][7:0] <= wr_data_i[7:0];
+      if (wmask_i[1]) mem[addr_i >> 2][15:8] <= wr_data_i[15:8];
+      if (wmask_i[2]) mem[addr_i >> 2][23:16] <= wr_data_i[23:16];
+      if (wmask_i[3]) mem[addr_i >> 2][31:24] <= wr_data_i[31:24];
     end
   end
 

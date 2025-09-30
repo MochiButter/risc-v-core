@@ -1,18 +1,18 @@
 module pipeline_reg 
   #(parameter Width = 32)
-  (input [0:0] clk_i
-  ,input [0:0] rst_i
+  (input logic clk_i
+  ,input logic rst_i
 
-  ,input [0:0] wr_valid_i
-  ,input [Width - 1:0] wr_data_i
-  ,output [0:0] wr_ready_o
+  ,input  logic         wr_valid_i
+  ,input  [Width - 1:0] wr_data_i
+  ,output logic         wr_ready_o
 
-  ,input [0:0] rd_ready_i
+  ,input logic          rd_ready_i
   ,output [Width - 1:0] rd_data_o
-  ,output [0:0] rd_valid_o
+  ,output logic         rd_valid_o
   );
 
-  logic [0:0] write, rd_valid_q;
+  logic write, rd_valid_q;
   logic [Width - 1:0] rd_data_q;
 
   always_comb begin

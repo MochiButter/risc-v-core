@@ -7,16 +7,16 @@
 module fifo
   #(parameter DepthLog2 = 2
   ,parameter Width = 32)
-  (input [0:0] clk_i
-  ,input [0:0] rst_i
+  (input logic clk_i
+  ,input logic rst_i
 
-  ,input [0:0] wr_valid_i
-  ,input [Width - 1:0] wr_data_i
-  ,output [0:0] wr_ready_o
+  ,input  logic               wr_valid_i
+  ,input  logic [Width - 1:0] wr_data_i
+  ,output logic               wr_ready_o
 
-  ,input [0:0] rd_ready_i
-  ,output [Width - 1:0] rd_data_o
-  ,output [0:0] rd_valid_o
+  ,input  logic               rd_ready_i
+  ,output logic [Width - 1:0] rd_data_o
+  ,output logic               rd_valid_o
   );
 
   if (DepthLog2 < 1) begin

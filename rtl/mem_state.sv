@@ -3,6 +3,7 @@ module mem_state import core_pkg::*;
   ,input logic rst_i
 
   /* From core */
+  ,input  logic valid_inst_i
   ,input  logic read_i // S type
   ,input  logic write_i // I type opcode 3
   ,input  logic [Xlen - 1:0] addr_i // rs1 + imm
@@ -64,7 +65,7 @@ module mem_state import core_pkg::*;
 
     case (state_q)
       Idle: begin
-        if (read_i || write_i) begin
+        if (valid_inst_i && (read_i || write_i)) begin
           if (read_i) begin
             wmask_d = 4'b0000;
           end else begin

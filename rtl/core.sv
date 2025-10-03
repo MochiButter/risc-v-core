@@ -183,6 +183,7 @@ module core import core_pkg::*;
     .clk_i(clk_i),
     .rst_i(rst_i),
 
+    .valid_inst_i(inst_valid),
     .read_i(mem_read),
     .write_i(mem_write),
     .addr_i(alu_res),

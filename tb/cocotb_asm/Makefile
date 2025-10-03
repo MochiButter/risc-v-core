@@ -20,13 +20,14 @@ COCOTB_TOPLEVEL = core
 
 COCOTB_TEST_MODULES = test_asm
 
-CUSTOM_SIM_DEPS = asm/jump.bin asm/arithmetic.bin asm/load.bin asm/store.bin asm/branch.bin asm/extra.bin
+CUSTOM_SIM_DEPS = asm/jump.bin asm/arithmetic.bin asm/load.bin asm/store.bin asm/branch.bin asm/extra.bin asm/loop.bin
 
+RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 %.bin: %.elf
-	riscv32-unknown-elf-objcopy -O binary $< $@
+	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
 
 %.elf: %.s
-	riscv32-unknown-elf-as $< -o $@
+	$(RISCV_TOOLCHAIN)as -march=rv32i -mabi=ilp32 $< -o $@
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

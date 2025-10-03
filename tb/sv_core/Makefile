@@ -12,6 +12,6 @@ TB_SOURCES := $(RTL_DIR)/ram_1rw_sync.sv \
 					    $(TB_DIR)/sv_core/core_tb.sv
 
 SIM_TOP := core_tb
-SIM_OPTS := -DBINPATH='"$(ROOT_DIR)/"' +incdir+$(ROOT_DIR)/rtl
+SIM_OPTS := -DBINPATH='"$(ROOT_DIR)/"'
 
 -include ../svbench.mk

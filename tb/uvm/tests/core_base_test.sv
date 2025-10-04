@@ -7,6 +7,9 @@ class core_base_test extends uvm_test;
   uvm_tlm_analysis_fifo #(bus_seq_item) watch_datamem_port;
   uvm_tlm_analysis_fifo #(bus_seq_item) watch_instmem_port;
 
+  string text_hex_path;
+  string data_hex_path;
+
   `uvm_component_utils(core_base_test)
   `uvm_comp_new
 
@@ -25,6 +28,18 @@ class core_base_test extends uvm_test;
   endfunction : connect_phase
 
   task run_phase (uvm_phase phase);
+    // setup
+    if ($value$plusargs("TEXT_HEX=%s", text_hex_path)) begin
+      inst_seq.load_program(text_hex_path);
+    end else begin
+      $error("Need test hex");
+    end
+    if ($value$plusargs("DATA_HEX=%s", data_hex_path)) begin
+      data_seq.load_program(data_hex_path);
+    end else begin
+      $error("Need test hex");
+    end
+
     // the test ends when the objection is dropped
     phase.raise_objection(this);
     fork

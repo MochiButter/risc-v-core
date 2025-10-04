@@ -62,8 +62,19 @@ $(SIM_DIR)/$(SIM_NAME).mk: $(wildcard $(RTL_DIR)/*.sv) $(wildcard ./bus_agent/*.
 $(SIM_DIR)/$(SIM_NAME): $(SIM_DIR)/$(SIM_NAME).mk
 	$(MAKE) -j${NPROC} -C $(SIM_DIR) $(BUILD_ARGS) -f $(SIM_NAME).mk
 
-simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME)
-	$(SIM_DIR)/$(SIM_NAME) +UVM_TESTNAME=$(UVM_TEST) | tee $(TEMPFILE)
+program.elf: ../cocotb_asm/asm/loop.s
+	riscv64-unknown-elf-as -march=rv32i -mabi=ilp32 $< -o $@
+
+program_text.hex: program.elf
+	riscv64-unknown-elf-objcopy -O verilog --verilog-data-width=4 --only-section=.text $< $@
+
+program_data.hex: program.elf
+	riscv64-unknown-elf-objcopy -O verilog --verilog-data-width=4 --only-section=.data $< $@
+
+simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME) program_text.hex program_data.hex
+	$(SIM_DIR)/$(SIM_NAME) +UVM_TESTNAME=$(UVM_TEST) +UVM_VERBOSITY=UVM_HIGH \
+		+TEXT_HEX=program_text.hex +DATA_HEX=program_data.hex \
+		| tee $(TEMPFILE)
 	@grep "^UVM_ERROR\\s*:\\s*0$$" $(TEMPFILE) -q
 	@grep "^UVM_FATAL\\s*:\\s*0$$" $(TEMPFILE) -q
 

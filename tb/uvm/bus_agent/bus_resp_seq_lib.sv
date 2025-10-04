@@ -7,29 +7,7 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
   `uvm_declare_p_sequencer(bus_resp_sequencer)
   `uvm_obj_new
 
-  /*
-   * addi x1, x0, 0x42
-   * addi x2, x0, 0x64
-   * li x3, 0xdeadbeef
-   * loop:
-   * blt x2, x1, target
-   * addi x1, x1, 0x10
-   * jal x0, loop
-   * target:
-   * sw x3, 0x20(x0)
-   * ebreak
-   */
   virtual task body();
-    mem[0] = 32'h04200093;
-    mem[1] = 32'h06400113;
-    mem[2] = 32'hDEADC1B7;
-    mem[3] = 32'hEEF18193;
-    mem[4] = 32'h00114663;
-    mem[5] = 32'h01008093;
-    mem[6] = 32'hFF9FF06F;
-    mem[7] = 32'h02302023;
-    mem[8] = 32'h00100073;
-
     forever begin
       p_sequencer.from_mon_port.get(item);
 
@@ -52,5 +30,9 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
       finish_item(req);
     end
   endtask : body
+
+  virtual task load_program(input string path);
+    $readmemh(path, mem);
+  endtask
 
 endclass : bus_resp_seq_base

@@ -31,8 +31,11 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
     end
   endtask : body
 
-  virtual task load_program(input string path);
+  task load_program(input string path);
     $readmemh(path, mem);
   endtask
 
+  function logic[31:0] get_word_at(input logic[31:0] addr);
+    return mem[addr >> 2];
+  endfunction
 endclass : bus_resp_seq_base

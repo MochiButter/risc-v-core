@@ -9,5 +9,6 @@ package core_test_pkg;
   `include "dv_macros.svh"
 
   `include "core_base_test.sv"
+  `include "core_test_lib.sv"
 
 endpackage

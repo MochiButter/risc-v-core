@@ -1,10 +1,17 @@
 # UVM testbench
 
-This setup was based on the testbenches in the
-[rice](https://github.com/taichi-ishitani/rice)
-and
-[ibex](https://github.com/lowRISC/ibex)
-repositories.
+Run `make simulate` to build and run the testbench in its default configuration.
+Use `ASM_FILE` to specify the assembly file to run the test on.
+Use `UVM_TEST` to specify which uvm test should be used.
+
+## RISCOF
+Set `UVM_TEST` to `core_test_riscof` to run the riscof testbench.
+Use `RISCOF_SIG_PATH` to specify the path to where the RISCOF signature file
+should be written to.
+The begin and end signature must be written to `32'h8000_0000` and
+`32'h8000_0004` respectively before terminating the test.
+The testbench is terminated when the core writes anything to the address
+`32'h8000_0000`
 
 The makefile is based on the one used in
 [verilator-verification](https://github.com/antmicro/verilator-verification).
@@ -23,6 +30,9 @@ The rvalid signal is set low until the next item comes.
 When the rvalid signal goes high after an item is passed to the sequencer, the
 monitor passes the completed transaction to the test class for checking.
 
+The current termination condition is hardcoded to be when the core writes
+`32'hdead_beef` to `32'h0000_00020`.
+
 ## Running
 The testbench can be run with verilator, but a newer version must be used.
 
@@ -36,7 +46,9 @@ The modified uvm library files are also needed, which can be found
 It is set as a submodule in the third-party directory, which can be downloaded
 with `git submodule update --init --recursive`
 
-To build and run the simulation:
-```
-make
-```
+## Acknowledgements
+This setup was based on the testbenches in the
+[rice](https://github.com/taichi-ishitani/rice)
+and
+[ibex](https://github.com/lowRISC/ibex)
+repositories.

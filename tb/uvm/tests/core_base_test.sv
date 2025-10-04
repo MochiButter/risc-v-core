@@ -13,7 +13,7 @@ class core_base_test extends uvm_test;
   `uvm_component_utils(core_base_test)
   `uvm_comp_new
 
-  virtual function void build_phase (uvm_phase phase);
+  function void build_phase (uvm_phase phase);
     super.build_phase(phase);
     watch_datamem_port = new("watch_datamem_port", this);
     watch_instmem_port = new("watch_instmem_port", this);
@@ -22,13 +22,19 @@ class core_base_test extends uvm_test;
     data_seq = bus_resp_seq_base::type_id::create("data_seq", this);
   endfunction : build_phase
 
-  virtual function void connect_phase (uvm_phase phase);
+  function void connect_phase (uvm_phase phase);
     env.data_if_resp_agent.monitor.item_collected_port.connect(this.watch_datamem_port.analysis_export);
     env.inst_if_resp_agent.monitor.item_collected_port.connect(this.watch_instmem_port.analysis_export);
   endfunction : connect_phase
 
-  task run_phase (uvm_phase phase);
-    // setup
+  virtual task run_phase (uvm_phase phase);
+    phase.raise_objection(this);
+    init_mem();
+    watch_bus_event(32'h0000_0020, 32'hdeadbeef, watch_datamem_port);
+    phase.drop_objection(this);
+  endtask
+
+  task init_mem ();
     if ($value$plusargs("TEXT_HEX=%s", text_hex_path)) begin
       inst_seq.load_program(text_hex_path);
     end else begin
@@ -40,15 +46,11 @@ class core_base_test extends uvm_test;
       $error("Need test hex");
     end
 
-    // the test ends when the objection is dropped
-    phase.raise_objection(this);
     fork
       inst_seq.start(env.inst_if_resp_agent.sequencer);
       data_seq.start(env.data_if_resp_agent.sequencer);
     join_none
-    watch_bus_event(32'h0000_0020, 32'hdeadbeef, watch_datamem_port);
-    phase.drop_objection(this);
-  endtask : run_phase
+  endtask : init_mem
 
   virtual task watch_bus_event(
     input bit [31:0] ref_addr,

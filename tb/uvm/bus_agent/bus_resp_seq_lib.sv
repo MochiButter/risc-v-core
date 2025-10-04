@@ -1,7 +1,7 @@
 class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
 
   bus_seq_item item;
-  logic [31:0] mem [0:255];
+  logic [31:0] mem [0:(1 <<  22) - 1];
 
   `uvm_object_utils(bus_resp_seq_base)
   `uvm_declare_p_sequencer(bus_resp_sequencer)

@@ -34,7 +34,7 @@ class core_test_riscof extends core_base_test;
         if (!fd) begin
           `uvm_warning(get_full_name(), "Failed to open signature file for writing")
         end else begin
-          while (begin_signature <= end_signature) begin
+          while (begin_signature < end_signature) begin
             $fdisplay(fd, $sformatf("%08h", data_seq.get_word_at(begin_signature)));
             begin_signature += 4;
           end

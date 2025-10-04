@@ -1,0 +1,23 @@
+44,45c44,46
+<         self.objdump_cmd = 'riscv{1}-unknown-elf-objdump -D {0} > {2};'
+<         self.compile_cmd = 'riscv{1}-unknown-elf-gcc -march={0} \
+---
+>         self.toolchain = os.getenv("RISCV_TOOLCHAIN", "riscv64-unknown-elf-")
+>         self.objdump_cmd = self.toolchain + 'objdump -D {0} > {2};'
+>         self.compile_cmd = self.toolchain + 'gcc -march={0} \
+70c71
+<         objdump = "riscv{0}-unknown-elf-objdump".format(self.xlen)
+---
+>         objdump = self.toolchain + "objdump".format(self.xlen)
+74c75
+<         compiler = "riscv{0}-unknown-elf-gcc".format(self.xlen)
+---
+>         compiler = self.toolchain + "gcc".format(self.xlen)
+121,122c122,125
+<         sail_config["memory"]["pmp"]["grain"] = pmp_flags["pmp-grain"]
+<         sail_config["memory"]["pmp"]["count"] = pmp_flags["pmp-count"]
+---
+>         if "PMP" in isa_yaml['hart0']:
+>             if isa_yaml['hart0']["PMP"]["implemented"] == True:
+>                 sail_config["memory"]["pmp"]["grain"] = pmp_flags["pmp-grain"]
+>                 sail_config["memory"]["pmp"]["count"] = pmp_flags["pmp-count"]

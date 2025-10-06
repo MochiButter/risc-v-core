@@ -1,6 +1,9 @@
 // Since fifos and pipeline registers are so mimilar in the ports and testing
 // criteria, I decided to reuse the fifo tb for both of them. The macro
 // SIM_PIPELINE alters tests slightly.
+`ifndef DUMPFILE
+`define DUMPFILE "dump.vcd"
+`endif
 module fifo_tb();
 `ifdef SIM_PIPELINE
   parameter DepthLog2 = 0;
@@ -109,8 +112,11 @@ module fifo_tb();
   endtask
 
   initial begin
+`ifdef DUMPFILE
   $dumpfile(`DUMPFILE);
+  $display(`DUMPFILE);
   $dumpvars;
+`endif
 
     reset();
     if (verbose) $display("=== FIFO WRITE THEN READ ===");

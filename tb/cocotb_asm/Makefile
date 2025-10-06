@@ -12,6 +12,7 @@ VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/alu32.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/decode.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/ram_1r1w_sync.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/fifo.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/mem_state.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/register.sv

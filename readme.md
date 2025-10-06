@@ -1,21 +1,14 @@
-**this project is very lacking in verification at the moment**
-
 # risc v core
 A cpu core that implements the RV32I instruction set.
 
 ## Verification
 Testbenches are placed in the `tb/` directory.
-You can run basic, systemverilog test benches with `make` in the directory, or go into each subdirectory and run these tests bt themselves.
+Design verification tools are placed in the `dv/` directory.
 
-The `cocotb_asm` directory is for testing different `.s` files on the core.
+To run basic tests, you can choose to run either a basic SystemVerilog testbench, Cocotb tests, or a uvm test.
 
-Running the cocotb testbench requires the following:
-
-```
-cocotb>=2.0
-riscv32-unknown-elf-as
-riscv32-unknown-elf-objcopy
-```
+To run the RISC-V architectural tests, go to the `dv/riscof` dir and run `make run-riscof`.
+See the expectations in the readme file in `dv/`.
 
 ## References
 

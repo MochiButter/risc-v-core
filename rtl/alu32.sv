@@ -16,9 +16,9 @@ module alu32 import core_pkg::*;
   assign xor_l  = a_i ^ b_i;
   assign or_l   = a_i | b_i;
   assign and_l  = a_i & b_i;
-  assign sll_l  = a_i << b_i;
-  assign srl_l  = a_i >> b_i;
-  assign sra_l  = $signed(a_i) >>> b_i;
+  assign sll_l  = a_i << b_i[4:0];
+  assign srl_l  = a_i >> b_i[4:0];
+  assign sra_l  = $signed(a_i) >>> b_i[4:0];
   assign slt_l  = ($signed(a_i) < $signed(b_i));
   assign sltu_l = (a_i < b_i);
 

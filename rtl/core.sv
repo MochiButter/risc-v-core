@@ -62,7 +62,7 @@ module core import core_pkg::*;
 
   logic [0:0] fifo_wr_ready, fifo_flush, fifo_rst;
 
-  logic [Xlen - 1:0] pc_request_d, pc_request_q, pc_d, pc_q;
+  logic [Xlen - 1:0] pc_request_d, pc_request_q, pc_d, pc_q, pc_jump;
 
   // really long comb chain?
   assign fifo_flush = inst_valid && (inst_jump_type != None || (is_branch && alu_zero));
@@ -80,20 +80,22 @@ module core import core_pkg::*;
   always_comb begin
     if (fifo_flush && inst_jump_type == Jalr) begin
       // jalr
-      pc_d = jalr_slice;
+      pc_jump = jalr_slice;
     end else if (fifo_flush) begin
       // jal and br
-      pc_d = inst_pc + inst_imm;
+      pc_jump = inst_pc + inst_imm;
     end else begin
       // the rest of instructions
-      pc_d = pc_q + 32'd4;
+      pc_jump = pc_q;
     end
   end
+
+  assign pc_d = pc_jump + 32'h4;
 
   // bypass jump destination to instr mem fetch
   always_comb begin
     if (fifo_flush) begin
-      pc_request_d = pc_d;
+      pc_request_d = pc_jump;
     end else begin
       pc_request_d = pc_q;
     end
@@ -104,7 +106,7 @@ module core import core_pkg::*;
       pc_q <= '0;
       // pc_request_q isn't used until at least 1 clk after fetch.
       // no need to reset as it is filled with valid data by that time
-    end else if (instmem_ready_i && instmem_valid_o) begin
+    end else if ((inst_valid && fifo_flush) || (instmem_ready_i && instmem_valid_o)) begin
       pc_q <= pc_d;
       pc_request_q <= pc_request_d;
     end

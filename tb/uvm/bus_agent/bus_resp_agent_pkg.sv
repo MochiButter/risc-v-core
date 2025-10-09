@@ -7,6 +7,7 @@ package bus_resp_agent_pkg;
 
   parameter AddrWidth = 32;
   parameter DataWidth = 32;
+  localparam MaskBits = DataWidth / 8;
 
   `include "bus_seq_item.sv"
   `include "bus_resp_sequencer.sv"

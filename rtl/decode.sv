@@ -1,6 +1,6 @@
 module decode import core_pkg::*;
   (input  logic [Ilen - 1:0] instr_i
-  ,output logic [31:0]       imm_o
+  ,output logic [Xlen - 1:0] imm_o
   ,output logic [1:0]        aluop_o
   ,output logic              alu_use_imm_o
   ,output logic              reg_wb_o
@@ -29,12 +29,17 @@ module decode import core_pkg::*;
   logic [6:0] opcode;
   assign opcode = instr_i[6:0];
 
-  logic [31:0] imm_i, imm_s, imm_b, imm_u, imm_j;
-  assign imm_i = {{20{instr_i[31]}}, instr_i[31:20]};
-  assign imm_s = {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
-  assign imm_b = {{19{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
-  assign imm_u = {instr_i[31:12], 12'b0};
-  assign imm_j = {{11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
+  localparam imm_i_rep_bits = Xlen - 12;
+  localparam imm_s_rep_bits = Xlen - 12;
+  localparam imm_b_rep_bits = Xlen - 13;
+  localparam imm_u_rep_bits = Xlen - 32;
+  localparam imm_j_rep_bits = Xlen - 21;
+  logic [Xlen - 1:0] imm_i, imm_s, imm_b, imm_u, imm_j;
+  assign imm_i = {{imm_i_rep_bits{instr_i[31]}}, instr_i[31:20]};
+  assign imm_s = {{imm_s_rep_bits{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
+  assign imm_b = {{imm_b_rep_bits{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
+  assign imm_u = {{imm_u_rep_bits{instr_i[31]}}, instr_i[31:12], 12'b0};
+  assign imm_j = {{imm_j_rep_bits{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
 
   always_comb begin
     reg_wb_o = 1'b0;

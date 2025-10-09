@@ -9,16 +9,16 @@ module core import core_pkg::*;
   ,output logic                    instmem_valid_o
   ,output logic [Xlen - 1:0]       instmem_addr_o
   ,output logic [Ilen - 1:0]       instmem_wdata_o
-  ,output logic [(Ilen / 8) - 1:0] instmem_wmask_o
+  ,output logic [MaskBits - 1:0]   instmem_wmask_o
   ,input  logic [Ilen - 1:0]       instmem_rdata_i
   ,input  logic                    instmem_rvalid_i
 
   ,input  logic                    datamem_ready_i
   ,output logic                    datamem_valid_o
   ,output logic [Xlen - 1:0]       datamem_addr_o
-  ,output logic [Ilen - 1:0]       datamem_wdata_o
-  ,output logic [(Ilen / 8) - 1:0] datamem_wmask_o
-  ,input  logic [Ilen - 1:0]       datamem_rdata_i
+  ,output logic [Xlen - 1:0]       datamem_wdata_o
+  ,output logic [MaskBits - 1:0]   datamem_wmask_o
+  ,input  logic [Xlen - 1:0]       datamem_rdata_i
   ,input  logic                    datamem_rvalid_i
   );
 
@@ -28,7 +28,7 @@ module core import core_pkg::*;
   logic [Ilen - 1:0] inst_data;
 
   /* Decode signals */
-  logic [31:0] inst_imm;
+  logic [Xlen - 1:0] inst_imm;
   aluop_e inst_aluop;
   jump_type_e inst_jump_type;
   logic [0:0] alu_use_imm, reg_wb, is_lui, is_auipc,
@@ -90,7 +90,7 @@ module core import core_pkg::*;
     end
   end
 
-  assign pc_d = pc_jump + 32'h4;
+  assign pc_d = pc_jump + 4;
 
   // bypass jump destination to instr mem fetch
   always_comb begin
@@ -112,7 +112,7 @@ module core import core_pkg::*;
     end
   end
 
-  assign inst_pc = fifo_rd_data[(Xlen + Ilen) - 1:Xlen];
+  assign inst_pc = fifo_rd_data[(Xlen + Ilen) - 1:Ilen];
   assign inst_data = fifo_rd_data[Ilen - 1:0];
 
   assign fifo_wr_data = {pc_request_q, instmem_rdata_i};
@@ -136,7 +136,7 @@ module core import core_pkg::*;
     end else if (is_lui) begin
       rd_data = inst_imm;
     end else if (inst_jump_type != None) begin
-      rd_data = inst_pc + 32'd4;
+      rd_data = inst_pc + 4;
     end else begin
       rd_data = alu_res;
     end
@@ -157,7 +157,7 @@ module core import core_pkg::*;
     .mem_to_reg_o(mem_to_reg)
   );
 
-  alu32 #() alu32_inst (
+  alu #() alu_inst (
     .funct3_i(funct3),
     .funct7_i(funct7),
     .itype_i(alu_use_imm),
@@ -168,7 +168,7 @@ module core import core_pkg::*;
     .zero_o(alu_zero)
   );
 
-  register #() reg_inst (
+  register #(.RegWidth(Xlen)) reg_inst (
     .clk_i(clk_i),
     .rst_i(rst_i),
     .rs1_addr_i(rs1_addr),

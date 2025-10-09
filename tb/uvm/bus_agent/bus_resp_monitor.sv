@@ -43,7 +43,7 @@ class bus_resp_monitor extends uvm_monitor;
       trans_collected.data = vif.wdata;
       trans_collected.wmask = vif.wmask;
 
-      `uvm_info(get_full_name(), $sformatf("MEM[0x%08h] 0b%04b 0x%08h",
+      `uvm_info(get_full_name(), $sformatf("MEM[0x%h] 0b%b 0x%h",
         vif.addr, vif.wmask, vif.wdata), UVM_HIGH)
       to_seqr_port.write(trans_collected);
       resp_queue.put(trans_collected);
@@ -62,7 +62,7 @@ class bus_resp_monitor extends uvm_monitor;
         @(posedge vif.clk_i);
       while (!vif.rvalid);
 
-      if (trans_collected.wmask == 4'b0000) begin
+      if (trans_collected.wmask == '0) begin
         trans_collected.data = vif.rdata;
       end
 

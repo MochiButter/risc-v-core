@@ -3,7 +3,7 @@
 RTL_SOURCES := $(RTL_DIR)/core_pkg.sv \
 							 $(RTL_DIR)/register.sv \
 					 		 $(RTL_DIR)/decode.sv \
-					     $(RTL_DIR)/alu32.sv \
+					     $(RTL_DIR)/alu.sv \
 					     $(RTL_DIR)/mem_state.sv \
 					     $(RTL_DIR)/ram_1r1w_sync.sv \
 					     $(RTL_DIR)/fifo.sv \

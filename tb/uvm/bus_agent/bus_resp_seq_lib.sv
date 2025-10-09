@@ -1,7 +1,7 @@
 class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
 
   bus_seq_item item;
-  logic [31:0] mem [0:(1 <<  22) - 1];
+  logic [DataWidth - 1:0] mem [0:(1 <<  22) - 1];
 
   `uvm_object_utils(bus_resp_seq_base)
   `uvm_declare_p_sequencer(bus_resp_sequencer)
@@ -17,13 +17,10 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
       req.data = item.data;
       req.wmask = item.wmask;
 
-      if (item.wmask == 4'b0000) begin
+      if (item.wmask == '0) begin
         req.data = mem[item.addr >> 2];
       end else begin
-        if (item.wmask[0]) mem[item.addr >> 2][7:0]   <= item.data[7:0];
-        if (item.wmask[1]) mem[item.addr >> 2][15:8]  <= item.data[15:8];
-        if (item.wmask[2]) mem[item.addr >> 2][23:16] <= item.data[23:16];
-        if (item.wmask[3]) mem[item.addr >> 2][31:24] <= item.data[31:24];
+        write(item.addr, item.data, item.wmask);
       end
 
       start_item(req);
@@ -31,11 +28,27 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
     end
   endtask : body
 
+  function void write (
+    input bit [AddrWidth - 1:0] addr,
+    input bit [DataWidth - 1:0] wdata,
+    input bit [MaskBits - 1:0] wmask
+  );
+    bit [DataWidth - 1:0] wdata_tmp;
+    wdata_tmp = mem[addr >> 2];
+    for (int i = 0; i < MaskBits; i ++) begin
+      if (wmask[i]) begin
+        wdata_tmp[(i * 8)+:8] = wdata[(i * 8)+:8];
+      end
+    end
+    mem[addr >> 2] = wdata_tmp;
+  endfunction
+
   task load_program(input string path);
     $readmemh(path, mem);
   endtask
 
-  function logic[31:0] get_word_at(input logic[31:0] addr);
+  function logic[DataWidth - 1:0] get_word_at(input logic[AddrWidth - 1:0] addr);
     return mem[addr >> 2];
-  endfunction
+  endfunction : get_word_at
+
 endclass : bus_resp_seq_base

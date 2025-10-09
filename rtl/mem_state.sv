@@ -18,7 +18,7 @@ module mem_state import core_pkg::*;
   ,output logic mem_valid_o
   ,output logic [Xlen - 1:0] mem_addr_o
   ,output logic [Xlen - 1:0] mem_wdata_o
-  ,output logic [(Xlen / 8) - 1:0] mem_wmask_o
+  ,output logic [MaskBits - 1:0] mem_wmask_o
   ,input  logic [Xlen - 1:0] mem_rdata_i
   ,input  logic mem_rvalid_i
   );
@@ -29,7 +29,7 @@ module mem_state import core_pkg::*;
 
   mem_state_e state_d, state_q;
 
-  logic [(Xlen / 8) - 1:0] wmask_d, wmask_q;
+  logic [MaskBits - 1:0] wmask_d, wmask_q;
   logic [Xlen - 1:0] addr_d, addr_q, wdata_d, wdata_q;
 
   logic [Xlen - 1:0] rdata_byte_0, rdata_byte_1, rdata_byte_2, rdata_byte_3;
@@ -39,13 +39,16 @@ module mem_state import core_pkg::*;
 
   assign sign_extend = !funct3_i[2];
 
-  assign rdata_byte_0 = {{24{sign_extend && mem_rdata_i[7]}}, mem_rdata_i[7:0]};
-  assign rdata_byte_1 = {{24{sign_extend && mem_rdata_i[15]}}, mem_rdata_i[15:8]};
-  assign rdata_byte_2 = {{24{sign_extend && mem_rdata_i[23]}}, mem_rdata_i[23:16]};
-  assign rdata_byte_3 = {{24{sign_extend && mem_rdata_i[31]}}, mem_rdata_i[31:24]};
+  localparam byte_rep_bits = Xlen - 8;
+  localparam half_rep_bits = Xlen - 16;
+  //localparam word_rep_bits = Xlen - 32;
+  assign rdata_byte_0 = {{byte_rep_bits{sign_extend && mem_rdata_i[7]}},  mem_rdata_i[7:0]};
+  assign rdata_byte_1 = {{byte_rep_bits{sign_extend && mem_rdata_i[15]}}, mem_rdata_i[15:8]};
+  assign rdata_byte_2 = {{byte_rep_bits{sign_extend && mem_rdata_i[23]}}, mem_rdata_i[23:16]};
+  assign rdata_byte_3 = {{byte_rep_bits{sign_extend && mem_rdata_i[31]}}, mem_rdata_i[31:24]};
 
-  assign rdata_half_0 = {{16{sign_extend && mem_rdata_i[15]}}, mem_rdata_i[15:0]};
-  assign rdata_half_2 = {{16{sign_extend && mem_rdata_i[31]}}, mem_rdata_i[31:16]};
+  assign rdata_half_0 = {{half_rep_bits{sign_extend && mem_rdata_i[15]}}, mem_rdata_i[15:0]};
+  assign rdata_half_2 = {{half_rep_bits{sign_extend && mem_rdata_i[31]}}, mem_rdata_i[31:16]};
 
   assign addr_i_byte = addr_i[1:0];
   assign addr_q_byte = addr_q[1:0];
@@ -67,18 +70,18 @@ module mem_state import core_pkg::*;
       Idle: begin
         if (valid_inst_i && (read_i || write_i)) begin
           if (read_i) begin
-            wmask_d = 4'b0000;
+            wmask_d = '0;
           end else begin
             case (funct3_i)
               // sb
-              3'h0: wmask_d = 4'b0001 << addr_i_byte;
+              3'h0: wmask_d = 'b0001 << addr_i_byte;
               // sh
               3'h1: begin
-                wmask_d = addr_i_byte == 2 ? 4'b1100 :
-                          addr_i_byte == 0 ? 4'b0011 : 'x;
+                wmask_d = addr_i_byte == 2 ? 'b1100 :
+                          addr_i_byte == 0 ? 'b0011 : 'x;
               end
               // sw
-              3'h2: wmask_d = 4'b1111;
+              3'h2: wmask_d = 'b1111;
               default: wmask_d = 'x;
             endcase
           end

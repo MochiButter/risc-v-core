@@ -1,4 +1,4 @@
-module alu32 import core_pkg::*;
+module alu import core_pkg::*;
   (input  logic [2:0]        funct3_i
   ,input  logic [6:0]        funct7_i
   ,input  logic              itype_i
@@ -9,6 +9,8 @@ module alu32 import core_pkg::*;
   ,output logic              zero_o
   );
 
+  localparam Shamt = Xlen == 64 ? 5 : 4;
+
   logic [Xlen - 1:0] add_l, sub_l, xor_l, or_l, and_l, sll_l, srl_l, sra_l;
   logic slt_l, sltu_l;
   assign add_l  = a_i + b_i;
@@ -16,9 +18,9 @@ module alu32 import core_pkg::*;
   assign xor_l  = a_i ^ b_i;
   assign or_l   = a_i | b_i;
   assign and_l  = a_i & b_i;
-  assign sll_l  = a_i << b_i[4:0];
-  assign srl_l  = a_i >> b_i[4:0];
-  assign sra_l  = $signed(a_i) >>> b_i[4:0];
+  assign sll_l  = a_i << b_i[Shamt:0];
+  assign srl_l  = a_i >> b_i[Shamt:0];
+  assign sra_l  = $signed(a_i) >>> b_i[Shamt:0];
   assign slt_l  = ($signed(a_i) < $signed(b_i));
   assign sltu_l = (a_i < b_i);
 
@@ -50,8 +52,8 @@ module alu32 import core_pkg::*;
           3'h7: res_o = and_l;
           3'h1: res_o = sll_l;
           3'h5: res_o = funct7_i == 7'h20 ? sra_l : srl_l;
-          3'h2: res_o = slt_l ? 32'h1 : 32'h0;
-          3'h3: res_o = sltu_l ? 32'h1 : 32'h0;
+          3'h2: res_o = slt_l ? 1 : 0;
+          3'h3: res_o = sltu_l ? 1 : 0;
           default: res_o = 'x;
         endcase
       end

@@ -28,8 +28,8 @@ class bus_resp_driver extends uvm_driver #(bus_seq_item);
       vif.rvalid <= 1'b1;
       // rdata out doesn't matter when writing
       vif.rdata <= req.data;
-      if (req.wmask == 4'b0000) begin
-        `uvm_info(get_full_name(), $sformatf("rdata: %08h", req.data), UVM_HIGH)
+      if (req.wmask == '0) begin
+        `uvm_info(get_full_name(), $sformatf("rdata: %h", req.data), UVM_HIGH)
       end
       seq_item_port.item_done();
     end

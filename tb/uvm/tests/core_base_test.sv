@@ -30,6 +30,7 @@ class core_base_test extends uvm_test;
   virtual task run_phase (uvm_phase phase);
     phase.raise_objection(this);
     init_mem();
+    // FIXME constant addr halt signal
     watch_bus_event(32'h0000_0020, 32'hdeadbeef, watch_datamem_port);
     phase.drop_objection(this);
   endtask
@@ -53,8 +54,8 @@ class core_base_test extends uvm_test;
   endtask : init_mem
 
   virtual task watch_bus_event(
-    input bit [31:0] ref_addr,
-    input bit [31:0] ref_data,
+    input bit [AddrWidth - 1:0] ref_addr,
+    input bit [DataWidth - 1:0] ref_data,
     uvm_tlm_analysis_fifo #(bus_seq_item) txn_port
   );
     bus_seq_item item;

@@ -2,6 +2,8 @@ package core_pkg;
   parameter Xlen = 32;
   parameter Ilen = 32;
 
+  localparam MaskBits = Xlen / 8;
+
   typedef enum logic [1:0] {
     Add, Sleft, Branch, Funct
   } aluop_e;

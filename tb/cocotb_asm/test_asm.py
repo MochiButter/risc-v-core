@@ -5,70 +5,97 @@ from cocotb.clock import Clock
 from cocotb_tools.runner import get_runner
 import os
 import random
+import math
+import logging
 
-mem = []
-def load_program(filename):
-    del mem[:]
-    addr = 0
-    print("=== Program memory ===")
-    program = open(filename, "rb")
-    while True:
-        word = program.read(4)
-        if word:
-            inst = int.from_bytes(word, "little")
-            mem.append(inst)
-            print(f"[0x{addr:08x}] 0x{inst:08x}")
-            addr += 4
-        else:
-            program.close()
-            print("=== Program end ===")
-            break
+logger = logging.getLogger("core_test")
+logger.setLevel(logging.INFO)
 
-async def mem_resp(dut):
-    dut.instmem_ready_i.value = 1;
-    while True:
-        await dut.clk_i.rising_edge
-        if not dut.rst_i.value and dut.instmem_valid_o.value == 1:
-            req_addr = int(dut.instmem_addr_o.value)
-            if (req_addr >> 2) < len(mem):
-                dut.instmem_rdata_i.value = mem[req_addr >> 2]
+class Mem():
+    bytes_per_word = 4
+    mem = None
+    maxint = 0
+    addr_shamt = 2
+
+    def __init__(self, datawidth, path=None):
+        self.mem = [0] * 256
+        self.bytes_per_word = int(datawidth / 8)
+        self.addr_shamt = int(math.log2(self.bytes_per_word))
+        self.maxint = (1 << datawidth) - 1
+        if not path:
+            return
+        program = open(path, "rb")
+        word = program.read(self.bytes_per_word)
+        cnt = 0
+        while (word):
+            data = int.from_bytes(word, "little")
+            self.mem[cnt] = data
+            cnt += 1
+            word = program.read(self.bytes_per_word)
+        program.close()
+
+    def dump_mem(self):
+        logger.debug("Mem dump")
+        cnt = 0
+        skip = False
+        for i in self.mem:
+            if i == 0:
+                if not skip:
+                    logger.debug("...")
+                skip = True
+                cnt += self.bytes_per_word
+                continue
+            logger.debug(f"[0x{cnt:016x}] 0x{i:016x}")
+            cnt += self.bytes_per_word
+            skip = False
+
+    def read_word(self, addr):
+        word = self.mem[addr >> self.addr_shamt]
+        return word
+
+    def write_word(self, addr, data, mask):
+        tmp_data = self.mem[addr >> self.addr_shamt]
+        for i in reversed(range(self.bytes_per_word)):
+            mask_bit = (mask & (1 << i)) >> i
+            data_byte = (data >> (i * 8)) & (0xff if mask_bit else 0x00)
+            tmp_data = tmp_data | (data_byte << (i * 8))
+        logger.info(f"Wrote [0x{addr:016x}] 0b{mask:08b} 0x{tmp_data:016x}")
+        self.mem[addr >> self.addr_shamt] = tmp_data
+
+    async def run_instmem(self, dut):
+        dut.instmem_ready_i.value = 1;
+        while True:
+            await dut.clk_i.rising_edge
+            if not dut.rst_i.value and dut.instmem_valid_o.value == 1:
+                req_addr = int(dut.instmem_addr_o.value)
+                dut.instmem_rdata_i.value = self.read_word(req_addr)
+                dut.instmem_rvalid_i.value = 1
             else:
-                dut.instmem_rdata_i.value = random.getrandbits(32)
-            dut.instmem_rvalid_i.value = 1
-        else:
-            dut.instmem_rvalid_i.value = 0
+                dut.instmem_rvalid_i.value = 0
 
-datamem = [0] * 256
-async def datamem_resp(dut):
-    dut.datamem_ready_i.value = 1;
-    while True:
-        await dut.clk_i.rising_edge
-        if dut.datamem_valid_o.value == 1:
-            req_addr = int(dut.datamem_addr_o.value)
-            if (req_addr >> 2) < len(datamem):
-                dut.datamem_rdata_i.value = datamem[req_addr >> 2]
+    async def run_datamem(self, dut):
+        dut.datamem_ready_i.value = 1;
+        while True:
+            await dut.clk_i.rising_edge
+            if dut.datamem_valid_o.value == 1:
+                req_addr = int(dut.datamem_addr_o.value)
+                dut.datamem_rdata_i.value = self.read_word(req_addr)
+                if dut.datamem_wmask_o.value != 0:
+                    wdata = int(dut.datamem_wdata_o.value)
+                    mask = int(dut.datamem_wmask_o.value)
+                    self.write_word(req_addr, wdata, mask)
+                dut.datamem_rvalid_i.value = 1
             else:
-                dut.datamem_rdata_i.value = random.getrandbits(32)
-            if dut.datamem_wmask_o.value != 0:
-                wdata = dut.datamem_wdata_o.value
-                mask = dut.datamem_wmask_o.value
-                data = 0
-                for i in range(4):
-                    byte = int(wdata[(i + 1) * 8 - 1:i * 8])
-                    if mask[i]:
-                        data += byte << (i * 8)
-                print(f"Wrote 0x{data:08x}")
-                datamem[req_addr >> 2] = data
-            dut.datamem_rvalid_i.value = 1
-        else:
-            dut.datamem_rvalid_i.value = 0
+                dut.datamem_rvalid_i.value = 0
 
-async def run_program(dut, filepath):
-    load_program(filepath)
+async def run_program(dut, filepath, check_mem=None):
+    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", filepath))
+    instmem = Mem(32, filepath)
+    instmem.dump_mem()
 
     cocotb.start_soon(Clock(dut.clk_i, 10, unit="ns").start())
-    cocotb.start_soon(mem_resp(dut))
-    cocotb.start_soon(datamem_resp(dut))
+    cocotb.start_soon(instmem.run_instmem(dut))
+    cocotb.start_soon(instmem.run_datamem(dut))
 
     dut.rst_i.value = 1
     for _ in range(3):
@@ -78,23 +105,22 @@ async def run_program(dut, filepath):
     inst = 0
     count = 0
     while inst != 0x00100073:
-        if dut.inst_valid.value == 1:
-            #pc = int(dut.fifo_rd_data.value[63:32])
-            #inst = int(dut.fifo_rd_data.value[31:0])
+        if dut.inst_valid.value == 1 and not dut.mem_busy.value:
             pc = int(dut.inst_pc.value)
             inst = int(dut.inst_data.value)
-            print(f"[0x{pc:08x}] 0x{inst:08x}")
+            logger.info(f"[0x{pc:016x}] 0x{inst:08x}")
         await dut.clk_i.rising_edge
         count += 1
-        if count > 50:
-            print("Timeout reached")
+        if count > 100:
+            logger.error("Timeout reached")
+            assert(0)
             break
+    if check_mem:
+        check_mem(instmem.mem)
 
 @cocotb.test()
 async def test_arith(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "arithmetic.bin"))
-    await run_program(dut, filepath)
+    await run_program(dut, "arithmetic.bin")
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x96
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0xffffffce
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0x56
@@ -110,9 +136,7 @@ async def test_arith(dut):
 
 @cocotb.test()
 async def test_jump(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "jump.bin"))
-    await run_program(dut, filepath)
+    await run_program(dut, "jump.bin")
     assert dut.reg_inst.regs_q[1].value == 0x1c
     assert dut.reg_inst.regs_q[2].value == 0x2c
     assert dut.reg_inst.regs_q[6].value == 0x0
@@ -124,10 +148,7 @@ async def test_jump(dut):
 
 @cocotb.test()
 async def test_load(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "load.bin"))
-    datamem[12] = 0x87654321
-    await run_program(dut, filepath)
+    await run_program(dut, "load.bin")
     assert dut.reg_inst.regs_q[2].get().to_unsigned() == 0x87654321
     assert dut.reg_inst.regs_q[3].get().to_unsigned() == 0x00000021
     assert dut.reg_inst.regs_q[4].get().to_unsigned() == 0xffffff87
@@ -138,22 +159,19 @@ async def test_load(dut):
 
 @cocotb.test()
 async def test_store(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "store.bin"))
-    await run_program(dut, filepath)
-    assert datamem[9]  == 0xdeadbeef
-    assert datamem[10] == 0x0000beef
-    assert datamem[11] == 0xbeef0000
-    assert datamem[12] == 0x000000ef
-    assert datamem[13] == 0x0000ef00
-    assert datamem[14] == 0x00ef0000
-    assert datamem[15] == 0xef000000
+    def check_mem(mem):
+        assert mem[12] == 0xdeadbeef
+        assert mem[14] == 0x0000beef
+        assert mem[16] == 0xbeef0000
+        assert mem[18] == 0x000000ef
+        assert mem[20] == 0x0000ef00
+        assert mem[22] == 0x00ef0000
+        assert mem[24] == 0xef000000
+    await run_program(dut, "store.bin", check_mem)
 
 @cocotb.test()
 async def test_branch(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "branch.bin"))
-    await run_program(dut, filepath)
+    await run_program(dut, "branch.bin")
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0
     assert dut.reg_inst.regs_q[4].get().to_unsigned()  == 2
     assert dut.reg_inst.regs_q[5].get().to_unsigned()  == 3
@@ -161,42 +179,15 @@ async def test_branch(dut):
 
 @cocotb.test()
 async def test_extra(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "extra.bin"))
-    await run_program(dut, filepath)
+    await run_program(dut, "extra.bin")
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x12345000
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x12345004
 
 @cocotb.test()
 async def test_loop(dut):
-    mem = []
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", "loop.bin"))
-    await run_program(dut, filepath)
+    def check_mem(mem):
+        assert mem[14] == 0xdeadbeef
+    await run_program(dut, "loop.bin", check_mem)
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xdeadbeef
-    assert datamem[8]  == 0xdeadbeef
-
-def test_programs_runner():
-    sim = os.getenv("SIM", "icarus")
-
-    sources = ["rtl/alu32.sv"
-              ,"rtl/core.sv"
-              ,"rtl/decode.sv"
-              ,"rtl/fifo.sv"
-              ,"rtl/mem_state.sv"
-              ,"rtl/register.sv"]
-    sources = [os.path.join(os.path.dirname(__file__), "../..", f) for f in sources]
-
-    for i in sources:
-        print(i)
-
-    runner = get_runner(sim)
-    runner.build(
-        sources=sources,
-        hdl_toplevel="core",
-        always=True,
-        timescale=["1ns","1ps"]
-    )
-
-    runner.test(hdl_toplevel="core", test_module="test_asm,")

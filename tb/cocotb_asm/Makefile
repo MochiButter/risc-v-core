@@ -21,7 +21,7 @@ COCOTB_TOPLEVEL = core
 
 COCOTB_TEST_MODULES = test_asm
 
-CUSTOM_SIM_DEPS = asm/jump.bin asm/arithmetic.bin asm/load.bin asm/store.bin asm/branch.bin asm/extra.bin asm/loop.bin
+CUSTOM_SIM_DEPS = $(patsubst %.s,%.bin,$(wildcard asm/*.s))
 
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 %.bin: %.elf

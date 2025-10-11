@@ -1,14 +1,14 @@
 # set x1 to deadbeef
 li x1, 0xdeadbeef
 
-sw x1, 36(x0)
+sw x1, 48(x0)
 
-sh x1, 40(x0)
-sh x1, 46(x0)
+sh x1, 56(x0)
+sh x1, 66(x0)
 
-sb x1, 48(x0)
-sb x1, 53(x0)
-sb x1, 58(x0)
-sb x1, 63(x0)
+sb x1, 72(x0)
+sb x1, 81(x0)
+sb x1, 90(x0)
+sb x1, 99(x0)
 
 ebreak

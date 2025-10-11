@@ -1,7 +1,7 @@
 module decode import core_pkg::*;
   (input  logic [Ilen - 1:0] instr_i
   ,output logic [Xlen - 1:0] imm_o
-  ,output logic [1:0]        aluop_o
+  ,output aluop_e            aluop_o
   ,output logic              alu_use_imm_o
   ,output logic              reg_wb_o
   ,output logic              reg_lui_o
@@ -78,7 +78,7 @@ module decode import core_pkg::*;
       end
       OpBranch: begin
         branch_o = 1'b1;
-        aluop_o = Branch;
+        aluop_o = Add;
         imm_o = imm_b;
       end
       OpJal: begin

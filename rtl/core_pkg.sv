@@ -4,8 +4,8 @@ package core_pkg;
 
   localparam MaskBits = Xlen / 8;
 
-  typedef enum logic [1:0] {
-    Add, Sleft, Branch, Funct
+  typedef enum logic {
+    Add, Funct
   } aluop_e;
 
   typedef enum logic [1:0] {

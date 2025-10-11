@@ -2,14 +2,17 @@ module alu import core_pkg::*;
   (input  logic [2:0]        funct3_i
   ,input  logic [6:0]        funct7_i
   ,input  logic              itype_i
-  ,input  logic [1:0]        aluop_i
+  ,input  aluop_e            aluop_i
   ,input  logic [Xlen - 1:0] a_i
   ,input  logic [Xlen - 1:0] b_i
   ,output logic [Xlen - 1:0] res_o
   ,output logic              zero_o
   );
 
-  localparam Shamt = Xlen == 64 ? 5 : 4;
+  localparam ShamtWidth = $clog2(Xlen) - 1;
+
+  logic [4:0] funct5;
+  assign funct5 = funct7_i[6:2];
 
   logic [Xlen - 1:0] add_l, sub_l, xor_l, or_l, and_l, sll_l, srl_l, sra_l;
   logic slt_l, sltu_l;
@@ -18,45 +21,47 @@ module alu import core_pkg::*;
   assign xor_l  = a_i ^ b_i;
   assign or_l   = a_i | b_i;
   assign and_l  = a_i & b_i;
-  assign sll_l  = a_i << b_i[Shamt:0];
-  assign srl_l  = a_i >> b_i[Shamt:0];
-  assign sra_l  = $signed(a_i) >>> b_i[Shamt:0];
+  assign sll_l  = a_i << b_i[ShamtWidth:0];
+  assign srl_l  = a_i >> b_i[ShamtWidth:0];
+  assign sra_l  = $signed(a_i) >>> b_i[ShamtWidth:0];
   assign slt_l  = ($signed(a_i) < $signed(b_i));
   assign sltu_l = (a_i < b_i);
+
+  logic [Xlen - 1:0] res_xlen;
 
   logic sub_reduce;
   assign sub_reduce = |sub_l;
 
   always_comb begin
-    res_o = 'x;
-    zero_o = 'x;
     case (aluop_i)
-      Add:   res_o = add_l;
-      Sleft: res_o = sll_l;
-      Branch: begin
-        case (funct3_i)
-          3'h0: zero_o = ~sub_reduce;
-          3'h1: zero_o = sub_reduce;
-          3'h4: zero_o = slt_l;
-          3'h5: zero_o = ~slt_l;
-          3'h6: zero_o = sltu_l;
-          3'h7: zero_o = ~sltu_l;
-          default: zero_o = 'x;
-        endcase
-      end
-      Funct: begin
-        case (funct3_i)
-          3'h0: res_o = (itype_i || funct7_i == 7'h00) ? add_l : sub_l;
-          3'h4: res_o = xor_l;
-          3'h6: res_o = or_l;
-          3'h7: res_o = and_l;
-          3'h1: res_o = sll_l;
-          3'h5: res_o = funct7_i == 7'h20 ? sra_l : srl_l;
-          3'h2: res_o = slt_l ? 1 : 0;
-          3'h3: res_o = sltu_l ? 1 : 0;
-          default: res_o = 'x;
-        endcase
-      end
+      Add: res_o = add_l;
+      Funct: res_o = res_xlen;
+    endcase
+  end
+
+  always_comb begin
+    case (funct3_i)
+      3'h0: res_xlen = (itype_i || funct7_i == 7'b0000000) ? add_l : sub_l;
+      3'h4: res_xlen = xor_l;
+      3'h6: res_xlen = or_l;
+      3'h7: res_xlen = and_l;
+      3'h1: res_xlen = sll_l;
+      3'h5: res_xlen = funct5 == 5'b01000 ? sra_l : srl_l;
+      3'h2: res_xlen = slt_l ? 'h1 : 'h0;
+      3'h3: res_xlen = sltu_l ? 'h1 : 'h0;
+      default: res_xlen = 'x;
+    endcase
+  end
+
+  always_comb begin
+    case (funct3_i)
+      3'h0: zero_o = ~sub_reduce;
+      3'h1: zero_o = sub_reduce;
+      3'h4: zero_o = slt_l;
+      3'h5: zero_o = ~slt_l;
+      3'h6: zero_o = sltu_l;
+      3'h7: zero_o = ~sltu_l;
+      default: zero_o = 'x;
     endcase
   end
 endmodule

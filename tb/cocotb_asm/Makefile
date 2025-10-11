@@ -28,7 +28,7 @@ RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
 
 %.elf: %.s
-	$(RISCV_TOOLCHAIN)as -march=rv32i -mabi=ilp32 $< -o $@
+	$(RISCV_TOOLCHAIN)as -march=rv64i -mabi=lp64 $< -o $@
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

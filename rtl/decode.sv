@@ -15,6 +15,8 @@ module decode import core_pkg::*;
   typedef enum logic [6:0] {
     OpALU    = 7'b0110011,
     OpALUImm = 7'b0010011,
+    OpALU32  = 7'b0111011,
+    OpALU32I = 7'b0011011,
     OpLoad   = 7'b0000011,
     OpStore  = 7'b0100011,
     OpBranch = 7'b1100011,
@@ -59,6 +61,16 @@ module decode import core_pkg::*;
       OpALUImm: begin
         reg_wb_o = 1'b1;
         aluop_o = Funct;
+        alu_use_imm_o = 1'b1;
+        imm_o = imm_i;
+      end
+      OpALU32: begin
+        reg_wb_o = 1'b1;
+        aluop_o = Op32;
+      end
+      OpALU32I: begin
+        reg_wb_o = 1'b1;
+        aluop_o = Op32;
         alu_use_imm_o = 1'b1;
         imm_o = imm_i;
       end

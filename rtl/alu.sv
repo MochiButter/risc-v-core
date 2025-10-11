@@ -28,6 +28,21 @@ module alu import core_pkg::*;
   assign sltu_l = (a_i < b_i);
 
   logic [Xlen - 1:0] res_xlen;
+  logic [31:0] op32_a, op32_b;
+  assign op32_a = a_i[31:0];
+  assign op32_b = b_i[31:0];
+
+  logic [31:0] addw_l, subw_l, sllw_l, srlw_l, sraw_l;
+  assign addw_l = op32_a + op32_b;
+  assign subw_l = op32_a - op32_b;
+  assign sllw_l = op32_a << op32_b[4:0];
+  assign srlw_l = op32_a >> op32_b[4:0];
+  assign sraw_l = $signed(op32_a) >>> op32_b[4:0];
+
+  logic [31:0] res32;
+  logic [Xlen - 1:0] res_ext;
+  assign res_ext = {{32{res32[31]}}, res32[31:0]};
+
 
   logic sub_reduce;
   assign sub_reduce = |sub_l;
@@ -35,7 +50,18 @@ module alu import core_pkg::*;
   always_comb begin
     case (aluop_i)
       Add: res_o = add_l;
+      Op32: res_o = res_ext;
       Funct: res_o = res_xlen;
+      default: res_o = 'x;
+    endcase
+  end
+
+  always_comb begin
+    case (funct3_i)
+      3'h0: res32 = (itype_i || funct7_i == 7'h00) ? addw_l : subw_l;
+      3'h1: res32 = sllw_l;
+      3'h5: res32 = funct7_i == 7'h20 ? sraw_l : srlw_l;
+      default: res32 = 'x;
     endcase
   end
 

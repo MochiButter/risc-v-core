@@ -90,7 +90,7 @@ class Mem():
 
 async def run_program(dut, filepath, check_mem=None):
     filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", filepath))
-    instmem = Mem(32, filepath)
+    instmem = Mem(64, filepath)
     instmem.dump_mem()
 
     cocotb.start_soon(Clock(dut.clk_i, 10, unit="ns").start())
@@ -115,6 +115,7 @@ async def run_program(dut, filepath, check_mem=None):
             logger.error("Timeout reached")
             assert(0)
             break
+    instmem.dump_mem()
     if check_mem:
         check_mem(instmem.mem)
 
@@ -122,13 +123,13 @@ async def run_program(dut, filepath, check_mem=None):
 async def test_arith(dut):
     await run_program(dut, "arithmetic.bin")
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x96
-    assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0xffffffce
+    assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0xffffffffffffffce
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0x56
     assert dut.reg_inst.regs_q[4].get().to_unsigned()  == 0x76
     assert dut.reg_inst.regs_q[5].get().to_unsigned()  == 0x20
-    assert dut.reg_inst.regs_q[6].get().to_unsigned()  == 0xba000000
-    assert dut.reg_inst.regs_q[7].get().to_unsigned()  == 0x17dde000
-    assert dut.reg_inst.regs_q[8].get().to_unsigned()  == 0xf7dde000
+    assert dut.reg_inst.regs_q[6].get().to_unsigned()  == 0xfffffffcba000000
+    assert dut.reg_inst.regs_q[7].get().to_unsigned()  == 0x1ffffffff7dde000
+    assert dut.reg_inst.regs_q[8].get().to_unsigned()  == 0xfffffffff7dde000
     assert dut.reg_inst.regs_q[9].get().to_unsigned()  == 0x1
     assert dut.reg_inst.regs_q[10].get().to_unsigned() == 0x1
     assert dut.reg_inst.regs_q[11].get().to_unsigned() == 0x0
@@ -149,24 +150,24 @@ async def test_jump(dut):
 @cocotb.test()
 async def test_load(dut):
     await run_program(dut, "load.bin")
-    assert dut.reg_inst.regs_q[2].get().to_unsigned() == 0x87654321
+    assert dut.reg_inst.regs_q[2].get().to_unsigned() == 0xffffffff87654321
     assert dut.reg_inst.regs_q[3].get().to_unsigned() == 0x00000021
-    assert dut.reg_inst.regs_q[4].get().to_unsigned() == 0xffffff87
+    assert dut.reg_inst.regs_q[4].get().to_unsigned() == 0xffffffffffffff87
     assert dut.reg_inst.regs_q[5].get().to_unsigned() == 0x00004321
-    assert dut.reg_inst.regs_q[6].get().to_unsigned() == 0xffff8765
+    assert dut.reg_inst.regs_q[6].get().to_unsigned() == 0xffffffffffff8765
     assert dut.reg_inst.regs_q[7].get().to_unsigned() == 0x00000087
     assert dut.reg_inst.regs_q[8].get().to_unsigned() == 0x00008765
 
 @cocotb.test()
 async def test_store(dut):
     def check_mem(mem):
-        assert mem[12] == 0xdeadbeef
-        assert mem[14] == 0x0000beef
-        assert mem[16] == 0xbeef0000
-        assert mem[18] == 0x000000ef
-        assert mem[20] == 0x0000ef00
-        assert mem[22] == 0x00ef0000
-        assert mem[24] == 0xef000000
+        assert mem[6] == 0xdeadbeef
+        assert mem[7] == 0x0000beef
+        assert mem[8] == 0xbeef0000
+        assert mem[9] == 0x000000ef
+        assert mem[10] == 0x0000ef00
+        assert mem[11] == 0x00ef0000
+        assert mem[12] == 0xef000000
     await run_program(dut, "store.bin", check_mem)
 
 @cocotb.test()
@@ -186,7 +187,7 @@ async def test_extra(dut):
 @cocotb.test()
 async def test_loop(dut):
     def check_mem(mem):
-        assert mem[14] == 0xdeadbeef
+        assert mem[7] == 0xdeadbeef
     await run_program(dut, "loop.bin", check_mem)
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064

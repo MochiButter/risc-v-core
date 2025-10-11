@@ -5,9 +5,9 @@ module core import core_pkg::*;
   ,input  logic                    instmem_ready_i
   ,output logic                    instmem_valid_o
   ,output logic [Xlen - 1:0]       instmem_addr_o
-  ,output logic [Ilen - 1:0]       instmem_wdata_o
+  ,output logic [Xlen - 1:0]       instmem_wdata_o
   ,output logic [MaskBits - 1:0]   instmem_wmask_o
-  ,input  logic [Ilen - 1:0]       instmem_rdata_i
+  ,input  logic [Xlen - 1:0]       instmem_rdata_i
   ,input  logic                    instmem_rvalid_i
 
   ,input  logic                    datamem_ready_i
@@ -113,7 +113,12 @@ module core import core_pkg::*;
   assign inst_pc = fifo_rd_data[(Xlen + Ilen) - 1:Ilen];
   assign inst_data = fifo_rd_data[Ilen - 1:0];
 
-  assign fifo_wr_data = {pc_request_q, instmem_rdata_i};
+  // FIXME make useable for rv32 as well
+  logic [31:0] instmem_high, instmem_low;
+  assign instmem_high = instmem_rdata_i[63:32];
+  assign instmem_low  = instmem_rdata_i[31:00];
+  assign fifo_wr_data = {pc_request_q, pc_request_q[2] == 1'b0 ? instmem_low : instmem_high};
+
   // dispatch new instr when the fifo is not empty and the current mem op is done
   assign fifo_rd_ready = !mem_busy;
 

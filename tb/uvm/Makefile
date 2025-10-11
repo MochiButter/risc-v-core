@@ -24,7 +24,7 @@ VERILOG_DEFINE_FILES += $(RTL_DIR)/core.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/decode.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/ram_1r1w_sync.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/fifo.sv
-VERILOG_DEFINE_FILES += $(RTL_DIR)/mem_state.sv
+VERILOG_DEFINE_FILES += $(RTL_DIR)/mem_lsu.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/register.sv
 
 VERILOG_DEFINE_FILES += ./bus_agent/bus_if.sv

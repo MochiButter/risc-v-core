@@ -8,8 +8,7 @@ module decode import core_pkg::*;
   ,output logic              is_auipc_o
   ,output logic              branch_o
   ,output logic [1:0]        jump_o
-  ,output logic              mem_read_o
-  ,output logic              mem_write_o
+  ,output logic [1:0]        mem_type_o
   ,output logic              mem_to_reg_o
   );
 
@@ -47,9 +46,8 @@ module decode import core_pkg::*;
     is_auipc_o = 1'b0;
     alu_use_imm_o = 1'b0;
     branch_o = 1'b0;
-    jump_o = None;
-    mem_read_o = 1'b0;
-    mem_write_o = 1'b0;
+    jump_o = JmpNone;
+    mem_type_o = MemNone;
     mem_to_reg_o = 1'b0;
     aluop_o = Add;
     imm_o = '0;
@@ -66,14 +64,14 @@ module decode import core_pkg::*;
       end
       OpLoad: begin
         reg_wb_o = 1'b1;
-        mem_read_o = 1'b1;
+        mem_type_o = MemLoad;
         mem_to_reg_o = 1'b1;
         aluop_o = Add;
         alu_use_imm_o = 1'b1;
         imm_o = imm_i;
       end
       OpStore: begin
-        mem_write_o = 1'b1;
+        mem_type_o = MemStore;
         aluop_o = Add;
         alu_use_imm_o = 1'b1;
         imm_o = imm_s;

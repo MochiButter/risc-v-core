@@ -1,6 +1,3 @@
-/* Harvard arcchitecture
- */
-
 module core import core_pkg::*;
   (input logic clk_i
   ,input logic rst_i
@@ -32,7 +29,8 @@ module core import core_pkg::*;
   aluop_e inst_aluop;
   jump_type_e inst_jump_type;
   logic [0:0] alu_use_imm, reg_wb, is_lui, is_auipc,
-    is_branch, mem_read, mem_write, mem_to_reg;
+    is_branch, mem_to_reg;
+  memop_type_e mem_type;
 
   logic [2:0] funct3;
   logic [6:0] funct7;
@@ -65,7 +63,7 @@ module core import core_pkg::*;
   logic [Xlen - 1:0] pc_request_d, pc_request_q, pc_d, pc_q, pc_jump;
 
   // really long comb chain?
-  assign fifo_flush = inst_valid && (inst_jump_type != None || (is_branch && alu_zero));
+  assign fifo_flush = inst_valid && (inst_jump_type != JmpNone || (is_branch && alu_zero));
   assign fifo_rst = rst_i || fifo_flush;
 
   // don't fetch until memop is done
@@ -135,7 +133,7 @@ module core import core_pkg::*;
       rd_data = load_data;
     end else if (is_lui) begin
       rd_data = inst_imm;
-    end else if (inst_jump_type != None) begin
+    end else if (inst_jump_type != JmpNone) begin
       rd_data = inst_pc + 4;
     end else begin
       rd_data = alu_res;
@@ -152,8 +150,7 @@ module core import core_pkg::*;
     .is_auipc_o(is_auipc),
     .branch_o(is_branch),
     .jump_o(inst_jump_type),
-    .mem_read_o(mem_read),
-    .mem_write_o(mem_write),
+    .mem_type_o(mem_type),
     .mem_to_reg_o(mem_to_reg)
   );
 
@@ -181,13 +178,12 @@ module core import core_pkg::*;
     .rs2_data_o(rs2_data)
   );
 
-  mem_state #() ms_inst (
+  mem_lsu #() lsu_inst (
     .clk_i(clk_i),
     .rst_i(rst_i),
 
     .valid_inst_i(inst_valid),
-    .read_i(mem_read),
-    .write_i(mem_write),
+    .mem_type_i(mem_type),
     .addr_i(alu_res),
     .wdata_i(rs2_data),
     .funct3_i(funct3),

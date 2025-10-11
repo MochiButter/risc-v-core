@@ -9,6 +9,10 @@ package core_pkg;
   } aluop_e;
 
   typedef enum logic [1:0] {
-    None, Jal, Jalr
+    JmpNone, Jal, Jalr
   } jump_type_e;
+
+  typedef enum logic [1:0] {
+    MemNone, MemLoad, MemStore
+  } memop_type_e;
 endpackage

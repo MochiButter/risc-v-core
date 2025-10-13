@@ -10,6 +10,7 @@ module fifo_wrap
   ,output [63:0] rd_data_o
   ,output [0:0] rd_valid_o
   );
+  logic wr_ready_two_o;
   fifo #(.DepthLog2(2), .Width(64))
     fifo (.*);
 endmodule

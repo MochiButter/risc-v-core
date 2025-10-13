@@ -16,6 +16,7 @@ module fifo
   ,input  logic               wr_valid_i
   ,input  logic [Width - 1:0] wr_data_i
   ,output logic               wr_ready_o
+  ,output logic               wr_ready_two_o
 
   ,input  logic               rd_ready_i
   ,output logic [Width - 1:0] rd_data_o
@@ -28,9 +29,11 @@ module fifo
 
   localparam Depth = (1 << DepthLog2);
 
-  logic [DepthLog2 - 1:0] ptr_write_q, ptr_write_d, ptr_read_q, ptr_read_d;
+  logic [DepthLog2 - 1:0] ptr_write_q, ptr_write_d, ptr_read_q, ptr_read_d,
+    ptr_write_two;
   logic [Width - 1:0] rd_data_mem, rd_data_reg;
-  logic [0:0] write, read, last_wr_q, last_rd_q, addr_equal, forward_data_d, forward_data_q;
+  logic [0:0] write, read, last_wr_q, last_rd_q, addr_equal,
+    forward_data_d, forward_data_q;
 
   assign write = wr_valid_i && wr_ready_o;
   assign read = rd_valid_o && rd_ready_i;
@@ -47,6 +50,7 @@ module fifo
 
   assign ptr_write_d = ptr_write_q + write;
   assign ptr_read_d = ptr_read_q + read;
+  assign ptr_write_two = ptr_write_q + 'h1;
 
   always_ff @(posedge clk_i) begin
     if (rst_i) begin
@@ -87,6 +91,7 @@ module fifo
 
   assign addr_equal = (ptr_write_q == ptr_read_q);
   assign wr_ready_o = !(addr_equal && last_wr_q);
+  assign wr_ready_two_o = !(ptr_write_two == ptr_read_q);
   assign rd_valid_o = !(addr_equal && last_rd_q);
   assign rd_data_o = forward_data_q ? rd_data_reg : rd_data_mem;
 endmodule

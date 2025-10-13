@@ -31,7 +31,7 @@ class core_base_test extends uvm_test;
     phase.raise_objection(this);
     init_mem();
     // FIXME constant addr halt signal
-    watch_bus_event(32'h0000_0020, 32'hdeadbeef, watch_datamem_port);
+    watch_bus_event('h38, 'hdeadbeef, watch_datamem_port);
     phase.drop_objection(this);
   endtask
 
@@ -61,7 +61,7 @@ class core_base_test extends uvm_test;
     bus_seq_item item;
     forever begin
       txn_port.get(item);
-      if (item.addr === ref_addr && item.data === ref_data) begin
+      if (item.addr == ref_addr && item.data == ref_data) begin
         return;
       end
     end

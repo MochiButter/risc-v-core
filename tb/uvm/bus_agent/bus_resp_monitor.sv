@@ -34,7 +34,6 @@ class bus_resp_monitor extends uvm_monitor;
     forever begin
       @(posedge vif.clk_i);
       trans_collected = bus_seq_item::type_id::create("trans_collected");
-      // TODO turn into wait
       while (!(vif.ready && vif.valid)) begin
         @(posedge vif.clk_i);
       end

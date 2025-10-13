@@ -18,7 +18,7 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
       req.wmask = item.wmask;
 
       if (item.wmask == '0) begin
-        req.data = mem[item.addr >> 2];
+        req.data = mem[item.addr >> AddrShift];
       end else begin
         write(item.addr, item.data, item.wmask);
       end
@@ -34,13 +34,13 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
     input bit [MaskBits - 1:0] wmask
   );
     bit [DataWidth - 1:0] wdata_tmp;
-    wdata_tmp = mem[addr >> 2];
+    wdata_tmp = mem[addr >> AddrShift];
     for (int i = 0; i < MaskBits; i ++) begin
       if (wmask[i]) begin
         wdata_tmp[(i * 8)+:8] = wdata[(i * 8)+:8];
       end
     end
-    mem[addr >> 2] = wdata_tmp;
+    mem[addr >> AddrShift] = wdata_tmp;
   endfunction
 
   task load_program(input string path);
@@ -48,7 +48,7 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
   endtask
 
   function logic[DataWidth - 1:0] get_word_at(input logic[AddrWidth - 1:0] addr);
-    return mem[addr >> 2];
+    return mem[addr >> AddrShift];
   endfunction : get_word_at
 
 endclass : bus_resp_seq_base

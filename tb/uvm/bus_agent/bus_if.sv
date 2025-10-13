@@ -1,6 +1,6 @@
 interface bus_if #(
-    parameter AddrWidth = 32,
-    parameter DataWidth = 32
+    parameter AddrWidth = 64,
+    parameter DataWidth = 64
   ) (
     input logic clk_i
   );

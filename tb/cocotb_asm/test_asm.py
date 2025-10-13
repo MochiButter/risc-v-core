@@ -65,9 +65,14 @@ class Mem():
     async def run_instmem(self, dut):
         dut.instmem_ready_i.value = 1;
         while True:
+            dut.instmem_ready_i.value = 1;
             await dut.clk_i.rising_edge
+            dut.instmem_rvalid_i.value = 0
             if not dut.rst_i.value and dut.instmem_valid_o.value == 1:
                 req_addr = int(dut.instmem_addr_o.value)
+                dut.instmem_ready_i.value = 0;
+                for i in range(random.randint(0,2)):
+                    await dut.clk_i.rising_edge
                 dut.instmem_rdata_i.value = self.read_word(req_addr)
                 dut.instmem_rvalid_i.value = 1
             else:
@@ -191,4 +196,4 @@ async def test_loop(dut):
     await run_program(dut, "loop.bin", check_mem)
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
-    assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xdeadbeef
+    assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xffffffffdeadbeef

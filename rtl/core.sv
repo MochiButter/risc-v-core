@@ -19,17 +19,18 @@ module core import core_pkg::*;
   ,input  logic                    datamem_rvalid_i
   );
 
-  /* Instruction fetch fifo signals */
+  /* Instruction fetch signals */
   logic [0:0] inst_valid;
   logic [Xlen - 1:0] inst_pc;
   logic [Ilen - 1:0] inst_data;
+  assign instmem_wmask_o = '0;
+  assign instmem_wdata_o = 'x;
 
   /* Decode signals */
   logic [Xlen - 1:0] inst_imm;
   aluop_e inst_aluop;
   jump_type_e inst_jump_type;
-  logic [0:0] alu_use_imm, reg_wb, is_lui, is_auipc,
-    is_branch, mem_to_reg;
+  logic alu_use_imm, reg_wb, is_lui, is_auipc, is_branch, mem_to_reg;
   memop_type_e mem_type;
 
   logic [2:0] funct3;
@@ -43,7 +44,7 @@ module core import core_pkg::*;
   assign rd_addr = inst_data[11:7];
 
   /* ALU signals */
-  logic [0:0] alu_zero;
+  logic alu_zero;
   logic [Xlen - 1:0] alu_res;
 
   /* Register signals */
@@ -51,86 +52,39 @@ module core import core_pkg::*;
   logic [Xlen - 1:0] rd_data;
 
   /* Data memory signals */
-  logic [0:0] load_valid, mem_busy;
+  logic load_valid, mem_busy;
   logic [Xlen - 1:0] load_data;
 
-  /* Program counter signals */
-  logic [0:0] fifo_rd_ready;
-  logic [(Xlen + Ilen) - 1:0] fifo_wr_data, fifo_rd_data;
+  logic control_hazard;
+  logic [Xlen - 1:0] jalr_slice, pc_target;
 
-  logic [0:0] fifo_wr_ready, fifo_flush, fifo_rst;
-
-  logic [Xlen - 1:0] pc_request_d, pc_request_q, pc_d, pc_q, pc_jump;
-
-  // really long comb chain?
-  assign fifo_flush = inst_valid && (inst_jump_type != JmpNone || (is_branch && alu_zero));
-  assign fifo_rst = rst_i || fifo_flush;
-
-  // don't fetch until memop is done
-  assign instmem_valid_o = fifo_wr_ready && !(inst_valid && mem_busy);
-  assign instmem_addr_o = pc_request_d;
-  assign instmem_wdata_o = 'x;
-  assign instmem_wmask_o = '0;
-  
-  logic [Xlen - 1:0] jalr_slice;
   assign jalr_slice = {alu_res[Xlen - 1:1], 1'b0};
+  assign control_hazard =
+    inst_valid && (inst_jump_type != JmpNone || (is_branch && alu_zero));
 
   always_comb begin
-    if (fifo_flush && inst_jump_type == Jalr) begin
-      // jalr
-      pc_jump = jalr_slice;
-    end else if (fifo_flush) begin
-      // jal and br
-      pc_jump = inst_pc + inst_imm;
-    end else begin
-      // the rest of instructions
-      pc_jump = pc_q;
+    pc_target = 'x;
+    if (control_hazard && inst_jump_type == Jalr) begin
+      pc_target = jalr_slice;
+    end else if (control_hazard) begin
+      pc_target = inst_pc + inst_imm;
     end
   end
 
-  assign pc_d = pc_jump + 4;
-
-  // bypass jump destination to instr mem fetch
-  always_comb begin
-    if (fifo_flush) begin
-      pc_request_d = pc_jump;
-    end else begin
-      pc_request_d = pc_q;
-    end
-  end
-
-  always_ff @(posedge clk_i) begin
-    if (rst_i) begin
-      pc_q <= '0;
-      // pc_request_q isn't used until at least 1 clk after fetch.
-      // no need to reset as it is filled with valid data by that time
-    end else if ((inst_valid && fifo_flush) || (instmem_ready_i && instmem_valid_o)) begin
-      pc_q <= pc_d;
-      pc_request_q <= pc_request_d;
-    end
-  end
-
-  assign inst_pc = fifo_rd_data[(Xlen + Ilen) - 1:Ilen];
-  assign inst_data = fifo_rd_data[Ilen - 1:0];
-
-  // FIXME make useable for rv32 as well
-  logic [31:0] instmem_high, instmem_low;
-  assign instmem_high = instmem_rdata_i[63:32];
-  assign instmem_low  = instmem_rdata_i[31:00];
-  assign fifo_wr_data = {pc_request_q, pc_request_q[2] == 1'b0 ? instmem_low : instmem_high};
-
-  // dispatch new instr when the fifo is not empty and the current mem op is done
-  assign fifo_rd_ready = !mem_busy;
-
-  fifo #(.DepthLog2(2), .Width(Xlen + Ilen)) fifo_inst (
+  fetch #() fetch_inst (
     .clk_i(clk_i),
-    .rst_i(fifo_rst),
-    .wr_valid_i(instmem_rvalid_i),
-    .wr_data_i(fifo_wr_data),
-    .wr_ready_o(fifo_wr_ready),
-    .rd_ready_i(fifo_rd_ready),
-    .rd_data_o(fifo_rd_data),
-    .rd_valid_o(inst_valid)
+    .rst_i(rst_i),
+    .control_hazard_i(control_hazard),
+    .pc_target_i(pc_target),
+    .mem_ready_i(instmem_ready_i),
+    .mem_valid_o(instmem_valid_o),
+    .mem_addr_o(instmem_addr_o),
+    .mem_rdata_i(instmem_rdata_i),
+    .mem_rvalid_i(instmem_rvalid_i),
+    .inst_ready_i(!mem_busy),
+    .inst_pc_o(inst_pc),
+    .inst_data_o(inst_data),
+    .inst_valid_o(inst_valid)
   );
 
   always_comb begin

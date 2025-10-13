@@ -24,6 +24,7 @@ VERILOG_DEFINE_FILES += $(RTL_DIR)/core.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/decode.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/ram_1r1w_sync.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/fifo.sv
+VERILOG_DEFINE_FILES += $(RTL_DIR)/fetch.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/mem_lsu.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/register.sv
 
@@ -69,13 +70,13 @@ $(SIM_DIR)/$(SIM_NAME): $(SIM_DIR)/$(SIM_NAME).mk
 	$(MAKE) -j${NPROC} -C $(SIM_DIR) $(BUILD_ARGS) -f $(SIM_NAME).mk
 
 $(SIM_DIR)/program.elf: $(ASM_FILE)
-	$(RISCV_TOOLCHAIN)as -march=rv32i -mabi=ilp32 $< -o $@
+	$(RISCV_TOOLCHAIN)as -march=rv64i -mabi=lp64 $< -o $@
 
 $(SIM_DIR)/program_text.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=4 --only-section=.text $< $@
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.text* $< $@
 
 $(SIM_DIR)/program_data.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=4 --only-section=.data $< $@
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.data* --only-section=.bss* $< $@
 
 simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME) $(SIM_DIR)/program_text.hex $(SIM_DIR)/program_data.hex
 	$(SIM_DIR)/$(SIM_NAME) +UVM_TESTNAME=$(UVM_TEST) +UVM_VERBOSITY=UVM_HIGH \

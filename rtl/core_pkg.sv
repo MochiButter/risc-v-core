@@ -4,6 +4,8 @@ package core_pkg;
 
   localparam MaskBits = Xlen / 8;
 
+  localparam logic [Xlen - 1:0] BootAddr = '0;
+
   typedef enum logic [1:0] {
     Add, Op32, Funct
   } aluop_e;

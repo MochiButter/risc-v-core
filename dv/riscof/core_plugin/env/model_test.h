@@ -30,8 +30,8 @@ li x1, 0x80000000      ;\
 la x2, begin_signature ;\
 sw x2, 0(x1)           ;\
 la x2, end_signature   ;\
-sw x2, 4(x1)           ;\
 sw x2, 8(x1)           ;\
+sw x2, 16(x1)          ;\
 end_loop:              ;\
 nop                    ;\
 j end_loop             ;\

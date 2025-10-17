@@ -1,25 +1,25 @@
-class core_base_test extends uvm_test;
+class core_base_test #(int AddrWidth, int DataWidth) extends uvm_test;
 
-  core_env env;
-  bus_resp_seq_base inst_seq;
-  bus_resp_seq_base data_seq;
+  core_env #(AddrWidth, DataWidth) env;
+  bus_resp_seq_base #(AddrWidth, DataWidth) inst_seq;
+  bus_resp_seq_base #(AddrWidth, DataWidth) data_seq;
 
-  uvm_tlm_analysis_fifo #(bus_seq_item) watch_datamem_port;
-  uvm_tlm_analysis_fifo #(bus_seq_item) watch_instmem_port;
+  uvm_tlm_analysis_fifo #(bus_seq_item #(AddrWidth, DataWidth)) watch_datamem_port;
+  uvm_tlm_analysis_fifo #(bus_seq_item #(AddrWidth, DataWidth)) watch_instmem_port;
 
   string text_hex_path;
   string data_hex_path;
 
-  `uvm_component_utils(core_base_test)
+  `uvm_component_param_utils(core_base_test #(AddrWidth, DataWidth))
   `uvm_comp_new
 
   function void build_phase (uvm_phase phase);
     super.build_phase(phase);
     watch_datamem_port = new("watch_datamem_port", this);
     watch_instmem_port = new("watch_instmem_port", this);
-    env = core_env::type_id::create("env", this);
-    inst_seq = bus_resp_seq_base::type_id::create("inst_seq", this);
-    data_seq = bus_resp_seq_base::type_id::create("data_seq", this);
+    env = core_env #(AddrWidth, DataWidth)::type_id::create("env", this);
+    inst_seq = bus_resp_seq_base #(AddrWidth, DataWidth)::type_id::create("inst_seq", this);
+    data_seq = bus_resp_seq_base #(AddrWidth, DataWidth)::type_id::create("data_seq", this);
   endfunction : build_phase
 
   function void connect_phase (uvm_phase phase);
@@ -56,9 +56,9 @@ class core_base_test extends uvm_test;
   virtual task watch_bus_event(
     input bit [AddrWidth - 1:0] ref_addr,
     input bit [DataWidth - 1:0] ref_data,
-    uvm_tlm_analysis_fifo #(bus_seq_item) txn_port
+    uvm_tlm_analysis_fifo #(bus_seq_item #(AddrWidth, DataWidth)) txn_port
   );
-    bus_seq_item item;
+    bus_seq_item #(AddrWidth, DataWidth) item;
     forever begin
       txn_port.get(item);
       if (item.addr == ref_addr && item.data == ref_data) begin

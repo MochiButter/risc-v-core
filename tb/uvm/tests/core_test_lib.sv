@@ -1,5 +1,12 @@
-class core_test_riscof extends core_base_test;
+parameter AddrWidth = 64;
+parameter DataWidth = 64;
 
+class core_basic_test extends core_base_test #(AddrWidth, DataWidth);
+  `uvm_component_utils(core_basic_test)
+  `uvm_comp_new
+endclass : core_basic_test
+
+class core_test_riscof extends core_base_test #(AddrWidth, DataWidth);
   string signature_path;
 
   `uvm_component_utils(core_test_riscof)
@@ -19,9 +26,8 @@ class core_test_riscof extends core_base_test;
   endtask : run_phase
 
   task riscof_signature_dump();
-    bus_seq_item item;
+    bus_seq_item #(AddrWidth, DataWidth) item;
     bit [AddrWidth - 1:0] begin_signature, end_signature;
-    // FIXME constant length mmio addr
     const bit [AddrWidth - 1:0] mmio_addr = 'h80000000;
     int fd;
     const int inc_amt = DataWidth / 8;

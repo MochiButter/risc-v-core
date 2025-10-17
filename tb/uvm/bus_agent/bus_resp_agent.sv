@@ -1,19 +1,19 @@
-class bus_resp_agent extends uvm_agent;
+class bus_resp_agent #(int AddrWidth, int DataWidth) extends uvm_agent;
 
-  bus_resp_monitor   monitor;
-  bus_resp_sequencer sequencer;
-  bus_resp_driver    driver;
+  bus_resp_monitor #(AddrWidth, DataWidth)   monitor;
+  bus_resp_sequencer #(AddrWidth, DataWidth) sequencer;
+  bus_resp_driver #(AddrWidth, DataWidth)    driver;
 
-  `uvm_component_utils(bus_resp_agent)
+  `uvm_component_param_utils(bus_resp_agent #(AddrWidth, DataWidth))
   `uvm_comp_new
 
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
-    monitor = bus_resp_monitor::type_id::create("monitor", this);
+    monitor = bus_resp_monitor #(AddrWidth, DataWidth)::type_id::create("monitor", this);
 
     if(get_is_active() == UVM_ACTIVE) begin
-      driver = bus_resp_driver::type_id::create("driver", this);
-      sequencer = bus_resp_sequencer::type_id::create("sequencer", this);
+      driver = bus_resp_driver #(AddrWidth, DataWidth)::type_id::create("driver", this);
+      sequencer = bus_resp_sequencer #(AddrWidth, DataWidth)::type_id::create("sequencer", this);
     end
   endfunction : build_phase
 

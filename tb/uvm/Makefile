@@ -14,7 +14,7 @@ endif
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 
 UVM_ROOT ?= $(ROOT_DIR)/third_party/uvm-1.2
-UVM_TEST ?= core_base_test
+UVM_TEST ?= core_basic_test
 ASM_FILE ?= $(TB_DIR)/cocotb_asm/asm/loop.s
 
 VERILOG_DEFINE_FILES = ${UVM_ROOT}/src/uvm.sv
@@ -73,10 +73,10 @@ $(SIM_DIR)/program.elf: $(ASM_FILE)
 	$(RISCV_TOOLCHAIN)as -march=rv64i -mabi=lp64 $< -o $@
 
 $(SIM_DIR)/program_text.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.text* $< $@
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=4 --only-section=.text* $< $@
 
 $(SIM_DIR)/program_data.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.data* --only-section=.bss* $< $@
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=4 --only-section=.data* --only-section=.bss* $< $@
 
 simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME) $(SIM_DIR)/program_text.hex $(SIM_DIR)/program_data.hex
 	$(SIM_DIR)/$(SIM_NAME) +UVM_TESTNAME=$(UVM_TEST) +UVM_VERBOSITY=UVM_HIGH \

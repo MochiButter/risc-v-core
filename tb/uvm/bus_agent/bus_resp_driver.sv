@@ -1,13 +1,13 @@
-class bus_resp_driver extends uvm_driver #(bus_seq_item);
+class bus_resp_driver #(int AddrWidth, int DataWidth) extends uvm_driver #(bus_seq_item #(AddrWidth, DataWidth));
 
-  virtual bus_if vif;
+  virtual bus_if #(AddrWidth, DataWidth) vif;
 
-  `uvm_component_utils(bus_resp_driver)
+  `uvm_component_param_utils(bus_resp_driver #(AddrWidth, DataWidth))
   `uvm_comp_new
 
   function void build_phase (uvm_phase phase);
     super.build_phase(phase);
-    if(!uvm_config_db #(virtual bus_if)::get(this, "", "vif", vif)) begin
+    if(!uvm_config_db #(virtual bus_if #(AddrWidth, DataWidth))::get(this, "", "vif", vif)) begin
       `uvm_fatal("NO_VIF", {"virtual interface must be set for: ", get_full_name(), ".vif"});
     end
   endfunction : build_phase

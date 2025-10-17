@@ -1,10 +1,13 @@
-class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
+class bus_resp_seq_base #(int AddrWidth, int DataWidth) extends uvm_sequence #(bus_seq_item #(AddrWidth, DataWidth));
 
-  bus_seq_item item;
+  localparam MaskBits = DataWidth / 8;
+  localparam AddrShift = $clog2(MaskBits);
+
+  bus_seq_item #(AddrWidth, DataWidth) item;
   logic [DataWidth - 1:0] mem [0:(1 <<  22) - 1];
 
-  `uvm_object_utils(bus_resp_seq_base)
-  `uvm_declare_p_sequencer(bus_resp_sequencer)
+  `uvm_object_param_utils(bus_resp_seq_base#(AddrWidth, DataWidth))
+  `uvm_declare_p_sequencer(bus_resp_sequencer #(AddrWidth, DataWidth))
   `uvm_obj_new
 
   virtual task body();
@@ -12,7 +15,7 @@ class bus_resp_seq_base extends uvm_sequence #(bus_seq_item);
       p_sequencer.from_mon_port.get(item);
 
       // req is part of the sequence class
-      req = bus_seq_item::type_id::create("req");
+      req = bus_seq_item #(AddrWidth, DataWidth)::type_id::create("req");
       req.addr = item.addr;
       req.data = item.data;
       req.wmask = item.wmask;

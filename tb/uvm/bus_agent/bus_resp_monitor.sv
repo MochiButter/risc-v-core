@@ -1,13 +1,15 @@
-class bus_resp_monitor extends uvm_monitor;
+class bus_resp_monitor #(int AddrWidth, int DataWidth) extends uvm_monitor;
 
-  virtual bus_if vif;
+  virtual bus_if #(AddrWidth, DataWidth) vif;
 
-  uvm_analysis_port #(bus_seq_item) item_collected_port;
-  uvm_analysis_port #(bus_seq_item) to_seqr_port;
+  typedef bus_seq_item #(AddrWidth, DataWidth) item_t;
 
-  mailbox #(bus_seq_item) resp_queue;
+  uvm_analysis_port #(item_t) item_collected_port;
+  uvm_analysis_port #(item_t) to_seqr_port;
 
-  `uvm_component_utils(bus_resp_monitor)
+  mailbox #(item_t) resp_queue;
+
+  `uvm_component_param_utils(bus_resp_monitor #(AddrWidth, DataWidth))
   `uvm_comp_new
 
   function void build_phase (uvm_phase phase);
@@ -16,7 +18,7 @@ class bus_resp_monitor extends uvm_monitor;
     item_collected_port = new("item_collected_port", this);
     resp_queue = new();
 
-    if (!uvm_config_db #(virtual bus_if)::get(this, "", "vif", vif)) begin
+    if (!uvm_config_db #(virtual bus_if #(AddrWidth, DataWidth))::get(this, "", "vif", vif)) begin
       `uvm_fatal("NO_VIF", {"virtual interface must be set for: ", get_full_name(), ".vif"});
     end
   endfunction : build_phase
@@ -29,11 +31,11 @@ class bus_resp_monitor extends uvm_monitor;
   endtask : run_phase
 
   virtual task monitor_addr();
-    bus_seq_item trans_collected;
+    item_t trans_collected;
 
     forever begin
       @(posedge vif.clk_i);
-      trans_collected = bus_seq_item::type_id::create("trans_collected");
+      trans_collected = item_t::type_id::create("trans_collected");
       while (!(vif.ready && vif.valid)) begin
         @(posedge vif.clk_i);
       end
@@ -53,7 +55,7 @@ class bus_resp_monitor extends uvm_monitor;
   // events to the test class so that a certain address may be monitored for
   // a termination signal
   virtual task monitor_resp();
-    bus_seq_item trans_collected;
+    item_t trans_collected;
     forever begin
       resp_queue.get(trans_collected);
 

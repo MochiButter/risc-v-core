@@ -13,8 +13,10 @@ module tb();
 
   int cycles = 0;
 
-  bus_if inst_if(.clk_i(clk_i));
-  bus_if data_if(.clk_i(clk_i));
+  parameter AddrWidth = 64;
+  parameter DataWidth = 64;
+  bus_if #(AddrWidth, DataWidth) inst_if(.clk_i(clk_i));
+  bus_if #(AddrWidth, DataWidth) data_if(.clk_i(clk_i));
 
   core #() core_inst (
     .clk_i(clk_i),
@@ -38,8 +40,8 @@ module tb();
   );
 
   initial begin
-    uvm_config_db#(virtual bus_if)::set(uvm_root::get(),"*inst_if_resp_agent*","vif",inst_if);
-    uvm_config_db#(virtual bus_if)::set(uvm_root::get(),"*data_if_resp_agent*","vif",data_if);
+    uvm_config_db#(virtual bus_if #(AddrWidth, DataWidth))::set(uvm_root::get(),"*inst_if_resp_agent*","vif",inst_if);
+    uvm_config_db#(virtual bus_if #(AddrWidth, DataWidth))::set(uvm_root::get(),"*data_if_resp_agent*","vif",data_if);
   end
 
   initial begin

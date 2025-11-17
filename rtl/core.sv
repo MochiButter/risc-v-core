@@ -20,7 +20,7 @@ module core import core_pkg::*;
   );
 
   /* Instruction fetch signals */
-  logic [0:0] inst_valid;
+  logic inst_valid;
   logic [Xlen - 1:0] inst_pc;
   logic [Ilen - 1:0] inst_data;
   assign instmem_wmask_o = '0;
@@ -30,7 +30,7 @@ module core import core_pkg::*;
   logic [Xlen - 1:0] inst_imm;
   aluop_e inst_aluop;
   jump_type_e inst_jump_type;
-  logic alu_use_imm, reg_wb, is_lui, is_auipc, is_branch, mem_to_reg;
+  logic alu_use_imm, reg_wb, is_lui, is_auipc, is_branch, mem_to_reg, is_csr;
   memop_type_e mem_type;
 
   logic [2:0] funct3;
@@ -51,6 +51,13 @@ module core import core_pkg::*;
   logic [Xlen - 1:0] rs1_data, rs2_data;
   logic [Xlen - 1:0] rd_data;
 
+  /* CSR signals */
+  logic [Xlen - 1:0] csr_rs1_data, csr_rd_data, csr_trap_vector;
+  assign csr_rs1_data = funct3[2] ? inst_imm : rs1_data;
+  logic [11:0] csr_addr;
+  assign csr_addr = inst_data[31:20];
+  logic csr_raise_trap;
+
   /* Data memory signals */
   logic load_valid, mem_busy;
   logic [Xlen - 1:0] load_data;
@@ -60,12 +67,14 @@ module core import core_pkg::*;
 
   assign jalr_slice = {alu_res[Xlen - 1:1], 1'b0};
   assign control_hazard =
-    inst_valid && (inst_jump_type != JmpNone || (is_branch && alu_zero));
+    inst_valid && ((inst_jump_type != JmpNone) || (is_branch && alu_zero) || csr_raise_trap);
 
   always_comb begin
     pc_target = 'x;
     if (control_hazard && inst_jump_type == Jalr) begin
       pc_target = jalr_slice;
+    end else if (control_hazard && csr_raise_trap) begin
+      pc_target = csr_trap_vector;
     end else if (control_hazard) begin
       pc_target = inst_pc + inst_imm;
     end
@@ -94,6 +103,8 @@ module core import core_pkg::*;
       rd_data = inst_imm;
     end else if (inst_jump_type != JmpNone) begin
       rd_data = inst_pc + 4;
+    end else if (is_csr) begin
+      rd_data = csr_rd_data;
     end else begin
       rd_data = alu_res;
     end
@@ -110,7 +121,8 @@ module core import core_pkg::*;
     .branch_o(is_branch),
     .jump_o(inst_jump_type),
     .mem_type_o(mem_type),
-    .mem_to_reg_o(mem_to_reg)
+    .mem_to_reg_o(mem_to_reg),
+    .is_csr_o(is_csr)
   );
 
   alu #() alu_inst (
@@ -135,6 +147,22 @@ module core import core_pkg::*;
     .rd_write_en_i(reg_wb && inst_valid && !mem_busy),
     .rs1_data_o(rs1_data),
     .rs2_data_o(rs2_data)
+  );
+
+  csr #(.MHartId('h0)) csr_inst (
+    .clk_i(clk_i),
+    .rst_i(rst_i),
+    .valid_i(inst_valid),
+    .is_csr_i(is_csr),
+    .funct3_i(funct3),
+    .rs1_addr_i(rs1_addr),
+    .rs1_data_i(csr_rs1_data),
+    .csr_addr_i(csr_addr),
+    .rd_addr_i(rd_addr),
+    .rd_data_o(csr_rd_data),
+    .pc_i(inst_pc),
+    .raise_trap_o(csr_raise_trap),
+    .trap_vector_o(csr_trap_vector)
   );
 
   mem_lsu #() lsu_inst (

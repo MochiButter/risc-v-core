@@ -10,6 +10,7 @@ module decode import core_pkg::*;
   ,output logic [1:0]        jump_o
   ,output logic [1:0]        mem_type_o
   ,output logic              mem_to_reg_o
+  ,output logic              is_csr_o
   );
 
   typedef enum logic [6:0] {
@@ -24,7 +25,7 @@ module decode import core_pkg::*;
     OpJalr   = 7'b1100111,
     OpLui    = 7'b0110111,
     OpAuipc  = 7'b0010111,
-    OpEnv    = 7'b1110011
+    OpSys    = 7'b1110011
   } opcode_e;
 
   logic [6:0] opcode;
@@ -35,12 +36,14 @@ module decode import core_pkg::*;
   localparam imm_b_rep_bits = Xlen - 13;
   localparam imm_u_rep_bits = Xlen - 32;
   localparam imm_j_rep_bits = Xlen - 21;
-  logic [Xlen - 1:0] imm_i, imm_s, imm_b, imm_u, imm_j;
+  localparam imm_sys_rep_bits = Xlen - 5;
+  logic [Xlen - 1:0] imm_i, imm_s, imm_b, imm_u, imm_j, imm_sys;
   assign imm_i = {{imm_i_rep_bits{instr_i[31]}}, instr_i[31:20]};
   assign imm_s = {{imm_s_rep_bits{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
   assign imm_b = {{imm_b_rep_bits{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
   assign imm_u = {{imm_u_rep_bits{instr_i[31]}}, instr_i[31:12], 12'b0};
   assign imm_j = {{imm_j_rep_bits{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
+  assign imm_sys = {{imm_sys_rep_bits{1'b0}}, instr_i[19:15]};
 
   always_comb begin
     reg_wb_o = 1'b0;
@@ -51,6 +54,7 @@ module decode import core_pkg::*;
     jump_o = JmpNone;
     mem_type_o = MemNone;
     mem_to_reg_o = 1'b0;
+    is_csr_o = 1'b0;
     aluop_o = Add;
     imm_o = '0;
     case (opcode)
@@ -119,9 +123,12 @@ module decode import core_pkg::*;
         is_auipc_o = 1'b1;
         aluop_o = Add;
       end
-      //OpEnv: begin
-        // TODO
-      //end
+      OpSys: begin
+        is_csr_o = 1'b1;
+        // FIXME funct3 == '0 will try to write 0 to x0
+        reg_wb_o = 1'b1;
+        imm_o = imm_sys;
+      end
       default: begin
         //$warning("Opcode not supported: %b", opcode_w);
       end

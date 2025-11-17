@@ -71,8 +71,8 @@ class Mem():
             if not dut.rst_i.value and dut.instmem_valid_o.value == 1:
                 req_addr = int(dut.instmem_addr_o.value)
                 dut.instmem_ready_i.value = 0;
-                for i in range(random.randint(0,2)):
-                    await dut.clk_i.rising_edge
+                # for i in range(random.randint(0,2)):
+                #     await dut.clk_i.rising_edge
                 dut.instmem_rdata_i.value = self.read_word(req_addr)
                 dut.instmem_rvalid_i.value = 1
             else:
@@ -197,3 +197,12 @@ async def test_loop(dut):
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xffffffffdeadbeef
+
+@cocotb.test()
+async def test_csr(dut):
+    await run_program(dut, "csr.bin")
+    assert dut.reg_inst.regs_q[2].get() == 0x14
+    assert dut.reg_inst.regs_q[3].get() == 0x15
+    assert dut.reg_inst.regs_q[4].get() == 0x800000000000000b
+    assert dut.reg_inst.regs_q[5].get() == 0x20
+    assert dut.reg_inst.regs_q[5].get() == 0x24

@@ -8,7 +8,6 @@ module mem_lsu import core_pkg::*;
   ,input  logic [Xlen - 1:0] wdata_i
   ,input  logic [2:0] funct3_i
   ,output logic [Xlen - 1:0] rdata_o
-  ,output logic rvalid_o
   ,output logic mem_busy_o
 
   ,input  logic mem_ready_i
@@ -128,7 +127,6 @@ module mem_lsu import core_pkg::*;
     state_d = state_q;
 
     mem_valid_o = 1'b0;
-    rvalid_o = 1'b0;
     mem_busy_o = 1'b0;
     req_ff_en = 1'b0;
 
@@ -149,7 +147,6 @@ module mem_lsu import core_pkg::*;
       end
       WaitForValid: begin
         if (mem_rvalid_i) begin
-          rvalid_o = 1'b1;
           state_d = Idle;
         end else begin
           mem_busy_o = 1'b1;

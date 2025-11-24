@@ -4,13 +4,10 @@ module csr import core_pkg::*;
   ,input  logic rst_i
 
   ,input  logic valid_i
-  ,input  logic is_csr_i
-  ,input  logic [2:0] funct3_i
+  ,input  csr_op_e csr_op_i
 
-  ,input  logic [4:0] rs1_addr_i
   ,input  logic [Xlen - 1:0] rs1_data_i
   ,input  logic [11:0] csr_addr_i
-  ,input  logic [4:0] rd_addr_i
   ,output logic [Xlen - 1:0] rd_data_o
 
   ,input  logic [Xlen - 1:0] pc_i
@@ -62,15 +59,6 @@ module csr import core_pkg::*;
     HWError      = 19
   } csr_mcause_e;
 
-  typedef enum logic [1:0] {
-    CSRRW = 2'b01,
-    CSRRS = 2'b10,
-    CSRRC = 2'b11
-  } csr_type_e;
-
-  logic [1:0] csr_type;
-  assign csr_type = funct3_i[1:0];
-
   logic [Xlen - 1:0] csr_wdata;
 
   logic [Xlen - 1:0] mtvec_d, mtvec_q;
@@ -87,10 +75,11 @@ module csr import core_pkg::*;
   assign mepc_mask = pc_i & {{Xlen - PcClearBits{1'b1}}, '0};
 
   logic csr_wsc, csr_ecall, csr_ebreak, csr_mret;
-  assign csr_wsc = csr_type != '0 && is_csr_i;
-  assign csr_ecall = is_csr_i && funct3_i == '0 && csr_addr_i == '0 && rd_addr_i == '0 && rs1_addr_i == '0;
-  assign csr_ebreak = is_csr_i && funct3_i == '0 && csr_addr_i == 12'h1 && rd_addr_i == '0 && rs1_addr_i == '0;
-  assign csr_mret = is_csr_i && funct3_i == '0 && csr_addr_i[4:0] == 5'b00010 && csr_addr_i[11:5] == 7'b0011000 && rd_addr_i =='0 && rs1_addr_i == '0; 
+  assign csr_wsc = csr_op_i == OpCSRRW ||
+    csr_op_i == OpCSRRS || csr_op_i == OpCSRRC;
+  assign csr_ecall = csr_op_i == OpEcall;
+  assign csr_ebreak = csr_op_i == OpEbreak;
+  assign csr_mret = csr_op_i == OpMret;
 
   logic [Xlen - 1:0] mcause_d, mcause_q;
   logic [Xlen - 1:0] mcause_tmp;
@@ -118,15 +107,14 @@ module csr import core_pkg::*;
       CSRmscratch: rd_data_o = mscratch_q;
       CSRmepc:     rd_data_o = mepc_q;
       CSRmcause:   rd_data_o = mcause_q;
-      //TODO ignore x0 dest instrs
       // unimplemented csrs shouls read 0
       // for forwards compatibility
       default: rd_data_o = '0;
     endcase
-    case (csr_type)
-      CSRRW: csr_wdata = rs1_data_i;
-      CSRRS: csr_wdata = rs1_data_i | rd_data_o;
-      CSRRC: csr_wdata = ~rs1_data_i & rd_data_o;
+    case (csr_op_i)
+      OpCSRRW: csr_wdata = rs1_data_i;
+      OpCSRRS: csr_wdata = rs1_data_i | rd_data_o;
+      OpCSRRC: csr_wdata = ~rs1_data_i & rd_data_o;
       default: csr_wdata = 'x;
     endcase
     mtvec_d = mtvec_q;
@@ -137,7 +125,6 @@ module csr import core_pkg::*;
       mepc_d = mepc_mask;
       mcause_d = mcause_tmp;
     end else if (valid_i && csr_wsc) begin
-      //TODO ignore x0 source instrs
       case (csr_addr_i)
         CSRmtvec:    mtvec_d = mtvec_mask;
         CSRmscratch: mscratch_d = csr_wdata;

@@ -205,4 +205,4 @@ async def test_csr(dut):
     assert dut.reg_inst.regs_q[3].get() == 0x15
     assert dut.reg_inst.regs_q[4].get() == 0x800000000000000b
     assert dut.reg_inst.regs_q[5].get() == 0x20
-    assert dut.reg_inst.regs_q[5].get() == 0x24
+    assert dut.reg_inst.regs_q[6].get() == 0x24

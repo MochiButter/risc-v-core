@@ -1,16 +1,20 @@
 module decode import core_pkg::*;
-  (input  logic [Ilen - 1:0] instr_i
+  (input  logic [Ilen - 1:0] inst_i
   ,output logic [Xlen - 1:0] imm_o
+  ,output inst_type_e        inst_type_o
+  ,output jump_type_e        jump_type_o
+  ,output reg_wb_src_e       reg_wb_src_o
+
   ,output aluop_e            aluop_o
-  ,output logic              alu_use_imm_o
-  ,output logic              reg_wb_o
-  ,output logic              reg_lui_o
-  ,output logic              is_auipc_o
-  ,output logic              branch_o
-  ,output logic [1:0]        jump_o
-  ,output logic [1:0]        mem_type_o
-  ,output logic              mem_to_reg_o
-  ,output logic              is_csr_o
+  ,output mem_type_e         mem_type_o
+
+  ,output logic [4:0]        rs1_addr_o
+  ,output logic [4:0]        rs2_addr_o
+  ,output logic [4:0]        rd_addr_o
+
+  ,output csr_op_e           csr_op_o
+  ,output logic              csr_imm_o
+  ,output logic [11:0]       csr_addr_o
   );
 
   typedef enum logic [6:0] {
@@ -29,7 +33,16 @@ module decode import core_pkg::*;
   } opcode_e;
 
   logic [6:0] opcode;
-  assign opcode = instr_i[6:0];
+  logic [2:0] funct3;
+  assign opcode = inst_i[6:0];
+  assign funct3 = inst_i[14:12];
+
+  assign rs1_addr_o = inst_i[19:15];
+  assign rs2_addr_o = inst_i[24:20];
+  assign rd_addr_o = inst_i[11:7];
+
+  assign csr_addr_o = inst_i[31:20];
+  assign csr_imm_o = funct3[2];
 
   localparam imm_i_rep_bits = Xlen - 12;
   localparam imm_s_rep_bits = Xlen - 12;
@@ -38,100 +51,109 @@ module decode import core_pkg::*;
   localparam imm_j_rep_bits = Xlen - 21;
   localparam imm_sys_rep_bits = Xlen - 5;
   logic [Xlen - 1:0] imm_i, imm_s, imm_b, imm_u, imm_j, imm_sys;
-  assign imm_i = {{imm_i_rep_bits{instr_i[31]}}, instr_i[31:20]};
-  assign imm_s = {{imm_s_rep_bits{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
-  assign imm_b = {{imm_b_rep_bits{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
-  assign imm_u = {{imm_u_rep_bits{instr_i[31]}}, instr_i[31:12], 12'b0};
-  assign imm_j = {{imm_j_rep_bits{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
-  assign imm_sys = {{imm_sys_rep_bits{1'b0}}, instr_i[19:15]};
+  assign imm_i = {{imm_i_rep_bits{inst_i[31]}}, inst_i[31:20]};
+  assign imm_s = {{imm_s_rep_bits{inst_i[31]}}, inst_i[31:25], inst_i[11:7]};
+  assign imm_b = {{imm_b_rep_bits{inst_i[31]}}, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
+  assign imm_u = {{imm_u_rep_bits{inst_i[31]}}, inst_i[31:12], 12'b0};
+  assign imm_j = {{imm_j_rep_bits{inst_i[31]}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+  assign imm_sys = {{imm_sys_rep_bits{1'b0}}, inst_i[19:15]};
 
   always_comb begin
-    reg_wb_o = 1'b0;
-    reg_lui_o = 1'b0;
-    is_auipc_o = 1'b0;
-    alu_use_imm_o = 1'b0;
-    branch_o = 1'b0;
-    jump_o = JmpNone;
-    mem_type_o = MemNone;
-    mem_to_reg_o = 1'b0;
-    is_csr_o = 1'b0;
+    imm_o = 'x;
+    inst_type_o = Rtype;
+    jump_type_o = JmpNone;
+    reg_wb_src_o = WbNone;
     aluop_o = Add;
-    imm_o = '0;
+    mem_type_o = MemNone;
+    csr_op_o = OpCSRNone;
+
     case (opcode)
       OpALU: begin
-        reg_wb_o = 1'b1;
+        inst_type_o = Rtype;
+        reg_wb_src_o = WbAlu;
         aluop_o = Funct;
       end
       OpALUImm: begin
-        reg_wb_o = 1'b1;
-        aluop_o = Funct;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Itype;
+        reg_wb_src_o = WbAlu;
         imm_o = imm_i;
+        aluop_o = Funct;
       end
       OpALU32: begin
-        reg_wb_o = 1'b1;
+        inst_type_o = Rtype;
+        reg_wb_src_o = WbAlu;
         aluop_o = Op32;
       end
       OpALU32I: begin
-        reg_wb_o = 1'b1;
-        aluop_o = Op32;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Itype;
+        reg_wb_src_o = WbAlu;
         imm_o = imm_i;
+        aluop_o = Op32;
       end
       OpLoad: begin
-        reg_wb_o = 1'b1;
-        mem_type_o = MemLoad;
-        mem_to_reg_o = 1'b1;
-        aluop_o = Add;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Itype;
+        reg_wb_src_o = WbLsu;
         imm_o = imm_i;
+        mem_type_o = MemLoad;
       end
       OpStore: begin
-        mem_type_o = MemStore;
-        aluop_o = Add;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Stype;
         imm_o = imm_s;
+        mem_type_o = MemStore;
       end
       OpBranch: begin
-        branch_o = 1'b1;
-        aluop_o = Add;
+        inst_type_o = Btype;
+        jump_type_o = JmpBr;
         imm_o = imm_b;
       end
       OpJal: begin
-        reg_wb_o = 1'b1;
+        inst_type_o = Jtype;
+        jump_type_o = JmpJal;
+        reg_wb_src_o = WbJmp;
         imm_o = imm_j;
-        aluop_o = Add;
-        jump_o = Jal;
       end
       OpJalr: begin
-        reg_wb_o = 1'b1;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Itype;
+        jump_type_o = JmpJalr;
+        reg_wb_src_o = WbJmp;
         imm_o = imm_i;
-        aluop_o = Add;
-        jump_o = Jalr;
       end
       OpLui: begin
-        reg_wb_o = 1'b1;
-        reg_lui_o = 1'b1;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Utype;
+        reg_wb_src_o = WbLui;
         imm_o = imm_u;
       end
       OpAuipc: begin
-        reg_wb_o = 1'b1;
-        alu_use_imm_o = 1'b1;
+        inst_type_o = Utype;
+        reg_wb_src_o = WbAlu;
         imm_o = imm_u;
-        is_auipc_o = 1'b1;
-        aluop_o = Add;
       end
       OpSys: begin
-        is_csr_o = 1'b1;
-        // FIXME funct3 == '0 will try to write 0 to x0
-        reg_wb_o = 1'b1;
+        inst_type_o = Itype;
+        case (funct3)
+          3'h0: begin
+            if (rs1_addr_o != '0 || rd_addr_o != '0) begin
+              // invalid instruction
+              // Not the case for SFENCE.VM
+            end
+            case (csr_addr_o)
+              12'h000: csr_op_o = OpEcall;
+              12'h001: csr_op_o = OpEbreak;
+              12'h302: csr_op_o = OpMret;
+              12'h002, 12'h102, 12'h202, 12'h7b2,
+                12'h104, 12'h105: ; // unimplemented
+              default: ;
+            endcase
+          end
+          3'h1, 3'h5: csr_op_o = OpCSRRW;
+          3'h2, 3'h6: csr_op_o = csr_op_e'((rs1_addr_o == '0) ? OpCSRRdonly : OpCSRRS);
+          3'h3, 3'h7: csr_op_o = csr_op_e'((rs1_addr_o == '0) ? OpCSRRdonly : OpCSRRC);
+          default: ;
+        endcase
+        reg_wb_src_o = WbCsr;
         imm_o = imm_sys;
       end
-      default: begin
-        //$warning("Opcode not supported: %b", opcode_w);
-      end
+      default: ;
     endcase
   end
 endmodule

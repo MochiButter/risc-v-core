@@ -28,10 +28,14 @@ module core import core_pkg::*;
 
   /* Decode signals */
   logic [Xlen - 1:0] inst_imm;
-  aluop_e inst_aluop;
-  jump_type_e inst_jump_type;
-  logic alu_use_imm, reg_wb, is_lui, is_auipc, is_branch, mem_to_reg, is_csr;
-  memop_type_e mem_type;
+  inst_type_e inst_type;
+  jump_type_e jump_type;
+  aluop_e aluop;
+  reg_wb_src_e reg_wb_src;
+  mem_type_e mem_type;
+  csr_op_e csrop;
+  logic [11:0] csr_addr;
+  logic csr_use_imm, reg_wb_en;
 
   logic [2:0] funct3;
   logic [6:0] funct7;
@@ -39,9 +43,6 @@ module core import core_pkg::*;
   assign funct7 = inst_data[31:25];
 
   logic [4:0] rs1_addr, rs2_addr, rd_addr;
-  assign rs1_addr = inst_data[19:15];
-  assign rs2_addr = inst_data[24:20];
-  assign rd_addr = inst_data[11:7];
 
   /* ALU signals */
   logic alu_zero;
@@ -53,25 +54,26 @@ module core import core_pkg::*;
 
   /* CSR signals */
   logic [Xlen - 1:0] csr_rs1_data, csr_rd_data, csr_trap_vector;
-  assign csr_rs1_data = funct3[2] ? inst_imm : rs1_data;
-  logic [11:0] csr_addr;
-  assign csr_addr = inst_data[31:20];
+  assign csr_rs1_data = csr_use_imm ? inst_imm : rs1_data;
   logic csr_raise_trap;
 
   /* Data memory signals */
-  logic load_valid, mem_busy;
+  logic mem_busy;
   logic [Xlen - 1:0] load_data;
 
   logic control_hazard;
   logic [Xlen - 1:0] jalr_slice, pc_target;
 
   assign jalr_slice = {alu_res[Xlen - 1:1], 1'b0};
-  assign control_hazard =
-    inst_valid && ((inst_jump_type != JmpNone) || (is_branch && alu_zero) || csr_raise_trap);
+  assign control_hazard = inst_valid && (
+    (jump_type == JmpJal || jump_type == JmpJalr) ||
+    (jump_type == JmpBr && alu_zero) ||
+    csr_raise_trap
+  );
 
   always_comb begin
     pc_target = 'x;
-    if (control_hazard && inst_jump_type == Jalr) begin
+    if (control_hazard && jump_type == JmpJalr) begin
       pc_target = jalr_slice;
     end else if (control_hazard && csr_raise_trap) begin
       pc_target = csr_trap_vector;
@@ -97,41 +99,56 @@ module core import core_pkg::*;
   );
 
   always_comb begin
-    if (mem_to_reg && load_valid) begin
-      rd_data = load_data;
-    end else if (is_lui) begin
-      rd_data = inst_imm;
-    end else if (inst_jump_type != JmpNone) begin
-      rd_data = inst_pc + 4;
-    end else if (is_csr) begin
-      rd_data = csr_rd_data;
-    end else begin
-      rd_data = alu_res;
-    end
+    case (reg_wb_src)
+      WbLsu: rd_data = load_data;
+      WbCsr: rd_data = csr_rd_data;
+      WbLui: rd_data = inst_imm;
+      WbJmp: rd_data = inst_pc + 4;
+      default: rd_data = alu_res;
+    endcase
   end
 
+
+  // when current instruction is valid, and when the memop finishes
+  assign reg_wb_en = (reg_wb_src != WbNone) && inst_valid && !mem_busy;
+
   decode #() decode_inst (
-    .instr_i(inst_data),
+    .inst_i(inst_data),
     .imm_o(inst_imm),
-    .aluop_o(inst_aluop),
-    .alu_use_imm_o(alu_use_imm),
-    .reg_wb_o(reg_wb),
-    .reg_lui_o(is_lui),
-    .is_auipc_o(is_auipc),
-    .branch_o(is_branch),
-    .jump_o(inst_jump_type),
+    .inst_type_o(inst_type),
+    .jump_type_o(jump_type),
+    .reg_wb_src_o(reg_wb_src),
+    .aluop_o(aluop),
     .mem_type_o(mem_type),
-    .mem_to_reg_o(mem_to_reg),
-    .is_csr_o(is_csr)
+    .rs1_addr_o(rs1_addr),
+    .rs2_addr_o(rs2_addr),
+    .rd_addr_o(rd_addr),
+    .csr_op_o(csrop),
+    .csr_imm_o(csr_use_imm),
+    .csr_addr_o(csr_addr)
   );
+
+  logic [Xlen - 1:0] alu_a, alu_b;
+
+  always_comb begin
+    case (inst_type)
+      Rtype, Btype: begin alu_a = rs1_data; alu_b = rs2_data; end
+      Itype, Stype: begin alu_a = rs1_data; alu_b = inst_imm; end
+      Utype:        begin alu_a = inst_pc;  alu_b = inst_imm; end
+      default:      begin alu_a = 'x;       alu_b = 'x;       end
+    endcase
+  end
+
+  logic is_itype;
+  assign is_itype = inst_type == Itype;
 
   alu #() alu_inst (
     .funct3_i(funct3),
     .funct7_i(funct7),
-    .itype_i(alu_use_imm),
-    .aluop_i(inst_aluop),
-    .a_i(is_auipc ? inst_pc : rs1_data),
-    .b_i(alu_use_imm ? inst_imm : rs2_data),
+    .itype_i(is_itype),
+    .aluop_i(aluop),
+    .a_i(alu_a),
+    .b_i(alu_b),
     .res_o(alu_res),
     .zero_o(alu_zero)
   );
@@ -143,8 +160,7 @@ module core import core_pkg::*;
     .rs2_addr_i(rs2_addr),
     .rd_addr_i(rd_addr),
     .rd_data_i(rd_data),
-    // when current instruction is valid, and when the memop finishes
-    .rd_write_en_i(reg_wb && inst_valid && !mem_busy),
+    .rd_write_en_i(reg_wb_en),
     .rs1_data_o(rs1_data),
     .rs2_data_o(rs2_data)
   );
@@ -153,12 +169,9 @@ module core import core_pkg::*;
     .clk_i(clk_i),
     .rst_i(rst_i),
     .valid_i(inst_valid),
-    .is_csr_i(is_csr),
-    .funct3_i(funct3),
-    .rs1_addr_i(rs1_addr),
+    .csr_op_i(csrop),
     .rs1_data_i(csr_rs1_data),
     .csr_addr_i(csr_addr),
-    .rd_addr_i(rd_addr),
     .rd_data_o(csr_rd_data),
     .pc_i(inst_pc),
     .raise_trap_o(csr_raise_trap),
@@ -175,7 +188,6 @@ module core import core_pkg::*;
     .wdata_i(rs2_data),
     .funct3_i(funct3),
     .rdata_o(load_data),
-    .rvalid_o(load_valid),
     .mem_busy_o(mem_busy),
 
     .mem_ready_i(datamem_ready_i),

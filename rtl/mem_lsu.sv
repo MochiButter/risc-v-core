@@ -51,76 +51,53 @@ module mem_lsu import core_pkg::*;
   assign rdata_byte = {{byte_rep_bits{sign_extend && rdata_shifted[7]}},  rdata_shifted[7:0]};
   assign rdata_half = {{half_rep_bits{sign_extend && rdata_shifted[15]}}, rdata_shifted[15:0]};
 
-  if (Xlen == 32) begin : l_Xlen_32
-    always_comb begin
-      if (mem_type_i === MemLoad) begin
-        wmask_d = '0;
-      end else begin
-        case (funct3_i)
-          3'h0: wmask_d = 4'b0001 << addr_i_byte;
-          3'h1: wmask_d = addr_i_byte == 2'b00 ? 4'b0011 :
-                        addr_i_byte == 2'b10 ? 4'b1100 : 'x;
-          3'h2: wmask_d = 4'b1111;
-          default: wmask_d = 'x;
-        endcase
-      end
-      case (funct3_i)
-        3'h0, 3'h4: rdata_o = rdata_byte;
-        3'h1, 3'h5: rdata_o = addr_q_byte == 2 || addr_q_byte == 0 ?
-          rdata_half : 'x;
-        3'h2: rdata_o = rdata_shifted;
-        default: rdata_o = 'x;
-      endcase
-    end
-  end else begin : l_Xlen_64
-    logic [Xlen - 1:0] rdata_word;
-    localparam word_rep_bits = Xlen - 32;
-    assign rdata_word = {{word_rep_bits{sign_extend && rdata_shifted[31]}}, rdata_shifted[31:0]};
+  logic [Xlen - 1:0] rdata_word;
+  localparam word_rep_bits = Xlen - 32;
+  assign rdata_word = {{word_rep_bits{sign_extend && rdata_shifted[31]}}, rdata_shifted[31:0]};
 
-    always_comb begin
-      if (mem_type_i === MemLoad) begin
-        wmask_d = '0;
-      end else begin
-        case (funct3_i)
-          3'h0: wmask_d = 8'b1 << addr_i_byte;
-          3'h1: begin
-            case (addr_i_byte)
-              3'h0: wmask_d = 8'b0000_0011;
-              3'h2: wmask_d = 8'b0000_1100;
-              3'h4: wmask_d = 8'b0011_0000;
-              3'h6: wmask_d = 8'b1100_0000;
-              default: wmask_d = 'x;
-            endcase
-          end
-          3'h2: begin
-            case (addr_i_byte)
-              3'h0: wmask_d = 8'b0000_1111;
-              3'h4: wmask_d = 8'b1111_0000;
-              default: wmask_d = 'x;
-            endcase
-          end
-          3'h3: wmask_d = 8'b1111_1111;
-          default: wmask_d = 'x;
-        endcase
-      end
+  always_comb begin
+    if (mem_type_i === MemLoad) begin
+      wmask_d = '0;
+    end else begin
       case (funct3_i)
-        3'h0, 3'h4: rdata_o = rdata_byte;
-        3'h1, 3'h5: begin
-          case (addr_q_byte)
-            3'h0, 3'h2, 3'h4, 3'h6: rdata_o = rdata_half;
-            default: rdata_o = 'x;
+        3'h0: wmask_d = 8'b1 << addr_i_byte;
+        3'h1: begin
+          case (addr_i_byte)
+            3'h0: wmask_d = 8'b0000_0011;
+            3'h2: wmask_d = 8'b0000_1100;
+            3'h4: wmask_d = 8'b0011_0000;
+            3'h6: wmask_d = 8'b1100_0000;
+            default: wmask_d = 'x;
           endcase
         end
-        3'h2, 3'h6: begin
-          case (addr_q_byte)
-            3'h0, 3'h4: rdata_o = rdata_word;
-            default: rdata_o = 'x;
+        3'h2: begin
+          case (addr_i_byte)
+            3'h0: wmask_d = 8'b0000_1111;
+            3'h4: wmask_d = 8'b1111_0000;
+            default: wmask_d = 'x;
           endcase
         end
-        3'h3: rdata_o = rdata_shifted;
-        default: rdata_o = 'x;
+        3'h3: wmask_d = 8'b1111_1111;
+        default: wmask_d = 'x;
       endcase
     end
+    case (funct3_i)
+      3'h0, 3'h4: rdata_o = rdata_byte;
+      3'h1, 3'h5: begin
+        case (addr_q_byte)
+          3'h0, 3'h2, 3'h4, 3'h6: rdata_o = rdata_half;
+          default: rdata_o = 'x;
+        endcase
+      end
+      3'h2, 3'h6: begin
+        case (addr_q_byte)
+          3'h0, 3'h4: rdata_o = rdata_word;
+          default: rdata_o = 'x;
+        endcase
+      end
+      3'h3: rdata_o = rdata_shifted;
+      default: rdata_o = 'x;
+    endcase
   end
 
   always_comb begin

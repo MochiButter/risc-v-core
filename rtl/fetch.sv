@@ -77,16 +77,12 @@ module fetch import core_pkg::*;
     end
   end
 
-  if (Xlen == 64) begin : l_Xlen_64
-    logic [31:0] instmem_high, instmem_low, fetch_rdata;
-    assign instmem_high = mem_rdata_i[63:32];
-    assign instmem_low  = mem_rdata_i[31:00];
-    assign fetch_rdata = fetch_addr_q[2] == 1'b0 ? instmem_low : instmem_high;
+  logic [31:0] instmem_high, instmem_low, fetch_rdata;
+  assign instmem_high = mem_rdata_i[63:32];
+  assign instmem_low  = mem_rdata_i[31:00];
+  assign fetch_rdata = fetch_addr_q[2] == 1'b0 ? instmem_low : instmem_high;
 
-    assign fifo_wr_data = {fetch_addr_q, fetch_rdata};
-  end else begin : l_Xlen_32
-    assign fifo_wr_data = {fetch_addr_q, mem_rdata_i};
-  end
+  assign fifo_wr_data = {fetch_addr_q, fetch_rdata};
 
   fifo #(.DepthLog2(2), .Width(Xlen + Ilen)) fifo_inst (
     .clk_i(clk_i),

@@ -43,33 +43,29 @@ module alu import core_pkg::*;
     endcase
   end
 
-  if (Xlen == 64) begin : l_Xlen_64
-    logic [31:0] res32;
-    logic [31:0] op32_a;
-    logic [4:0] op32_b;
-    assign op32_a = a_i[31:0];
-    assign op32_b = b_i[4:0];
+  logic [31:0] res32;
+  logic [31:0] op32_a;
+  logic [4:0] op32_b;
+  assign op32_a = a_i[31:0];
+  assign op32_b = b_i[4:0];
 
-    logic [31:0] addw_l, subw_l, sllw_l, srlw_l, sraw_l;
-    assign addw_l = add_l[31:0];
-    assign subw_l = sub_l[31:0];
-    assign sllw_l = op32_a << op32_b[4:0];
-    assign srlw_l = op32_a >> op32_b[4:0];
-    assign sraw_l = $signed(op32_a) >>> op32_b[4:0];
+  logic [31:0] addw_l, subw_l, sllw_l, srlw_l, sraw_l;
+  assign addw_l = add_l[31:0];
+  assign subw_l = sub_l[31:0];
+  assign sllw_l = op32_a << op32_b[4:0];
+  assign srlw_l = op32_a >> op32_b[4:0];
+  assign sraw_l = $signed(op32_a) >>> op32_b[4:0];
 
-    always_comb begin
-      case (funct3_i)
-        3'h0: res32 = (itype_i || funct7_i == 7'h00) ? addw_l : subw_l;
-        3'h1: res32 = sllw_l;
-        3'h5: res32 = funct7_i == 7'h20 ? sraw_l : srlw_l;
-        default: res32 = 'x;
-      endcase
-    end
-
-    assign res_ext = {{Xlen - 32{res32[31]}}, res32[31:0]};
-  end else begin : l_Xlen_32
-    assign res_ext = 'x;
+  always_comb begin
+    case (funct3_i)
+      3'h0: res32 = (itype_i || funct7_i == 7'h00) ? addw_l : subw_l;
+      3'h1: res32 = sllw_l;
+      3'h5: res32 = funct7_i == 7'h20 ? sraw_l : srlw_l;
+      default: res32 = 'x;
+    endcase
   end
+
+  assign res_ext = {{Xlen - 32{res32[31]}}, res32[31:0]};
 
   always_comb begin
     case (funct3_i)

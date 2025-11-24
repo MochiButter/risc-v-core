@@ -70,8 +70,7 @@ module csr import core_pkg::*;
 
   logic [Xlen - 1:0] mepc_d, mepc_q;
   logic [Xlen - 1:0] mepc_mask;
-  // clear the 2 lsbs for Xlen == 32, only the lsb for 64
-  localparam PcClearBits = Xlen == 32 ? 2 : 1;
+  localparam PcClearBits = 1;
   assign mepc_mask = pc_i & {{Xlen - PcClearBits{1'b1}}, '0};
 
   logic csr_wsc, csr_ecall, csr_ebreak, csr_mret;
@@ -84,7 +83,6 @@ module csr import core_pkg::*;
   logic [Xlen - 1:0] mcause_d, mcause_q;
   logic [Xlen - 1:0] mcause_tmp;
   localparam McausePadding = Xlen - 32;
-  // FIXME all causes are interrupts
   always_comb begin
     if (csr_ecall) begin
       mcause_tmp = {1'b1, {McausePadding{1'b0}}, MExtInt};

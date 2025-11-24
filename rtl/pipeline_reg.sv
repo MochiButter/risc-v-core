@@ -1,7 +1,7 @@
 module pipeline_reg 
   #(parameter Width = 32)
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input  logic         wr_valid_i
   ,input  [Width - 1:0] wr_data_i
@@ -20,7 +20,7 @@ module pipeline_reg
   end
   
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       rd_valid_q <= 1'b0;
     end else begin
       if (write) begin

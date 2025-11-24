@@ -1,6 +1,6 @@
 module mem_lsu import core_pkg::*;
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input  logic valid_inst_i
   ,input  logic [1:0] mem_type_i
@@ -134,7 +134,7 @@ module mem_lsu import core_pkg::*;
   end
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       state_q <= Idle;
     end else begin
       state_q <= state_d;

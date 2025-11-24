@@ -3,12 +3,12 @@ module tb();
   import core_test_pkg::*;
 
   logic clk_i;
-  logic rst_i;
+  logic rst_ni;
 
   always #5 clk_i = ~clk_i;
 
   initial begin
-    rst_i = 1'b0;
+    rst_ni = 1'b1;
   end
 
   int cycles = 0;
@@ -20,7 +20,7 @@ module tb();
 
   core #() core_inst (
     .clk_i(clk_i),
-    .rst_i(rst_i),
+    .rst_ni(rst_ni),
 
     .instmem_ready_i (inst_if.ready),
     .instmem_valid_o (inst_if.valid),

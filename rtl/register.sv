@@ -9,7 +9,7 @@ module register
   #(parameter RegWidth = 32,
     parameter RegDepth = 32)
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input  logic [$clog2(RegDepth) - 1:0] rs1_addr_i
   ,input  logic [$clog2(RegDepth) - 1:0] rs2_addr_i
@@ -39,7 +39,7 @@ module register
   always_ff @(posedge clk_i) begin
     // NOTE: Reset-ing the registers may be the compiler's job
     // but I'm doing it here for now
-    if (rst_i) begin
+    if (!rst_ni) begin
       for (int i = 1; i < RegDepth; i++) begin
         regs_q[i] <= '0;
       end

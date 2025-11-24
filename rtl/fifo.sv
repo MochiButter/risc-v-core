@@ -11,7 +11,7 @@ module fifo
   #(parameter DepthLog2 = 2
   ,parameter Width = 32)
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input  logic               wr_valid_i
   ,input  logic [Width - 1:0] wr_data_i
@@ -39,7 +39,7 @@ module fifo
   assign read = rd_valid_o && rd_ready_i;
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       last_wr_q <= 1'b0;
       last_rd_q <= 1'b1;
     end else if (write || read) begin
@@ -53,7 +53,7 @@ module fifo
   assign ptr_write_two = ptr_write_q + 'h1;
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       ptr_write_q <= '0;
       ptr_read_q <= '0;
     end else begin

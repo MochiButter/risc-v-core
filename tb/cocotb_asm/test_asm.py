@@ -68,7 +68,7 @@ class Mem():
             dut.instmem_ready_i.value = 1;
             await dut.clk_i.rising_edge
             dut.instmem_rvalid_i.value = 0
-            if not dut.rst_i.value and dut.instmem_valid_o.value == 1:
+            if dut.rst_ni.value and dut.instmem_valid_o.value == 1:
                 req_addr = int(dut.instmem_addr_o.value)
                 dut.instmem_ready_i.value = 0;
                 # for i in range(random.randint(0,2)):
@@ -102,10 +102,10 @@ async def run_program(dut, filepath, check_mem=None):
     cocotb.start_soon(instmem.run_instmem(dut))
     cocotb.start_soon(instmem.run_datamem(dut))
 
-    dut.rst_i.value = 1
+    dut.rst_ni.value = 0
     for _ in range(3):
         await dut.clk_i.rising_edge
-    dut.rst_i.value = 0
+    dut.rst_ni.value = 1
 
     inst = 0
     count = 0

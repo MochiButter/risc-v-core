@@ -1,6 +1,6 @@
 module fetch import core_pkg::*;
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input logic control_hazard_i
   ,input logic [Xlen - 1:0] pc_target_i
@@ -28,7 +28,7 @@ module fetch import core_pkg::*;
   assign mem_valid_o = fifo_wr_ready;
   assign mem_addr_o  = fetch_addr_d;
 
-  assign fifo_rst = rst_i || control_hazard_i;
+  assign fifo_rst = !rst_ni || control_hazard_i;
   assign fifo_wr_valid = mem_rvalid_i && fetch_state_q != Hazard;
 
   assign pc_next_d = fetch_addr_d + 'h4;
@@ -42,7 +42,7 @@ module fetch import core_pkg::*;
   end
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       pc_next_q <= BootAddr;
     end else if (mem_ready_i && mem_valid_o) begin
       pc_next_q <= pc_next_d;
@@ -70,7 +70,7 @@ module fetch import core_pkg::*;
   end
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       fetch_state_q <= Fetching;
     end else begin
       fetch_state_q <= fetch_state_d;
@@ -86,7 +86,7 @@ module fetch import core_pkg::*;
 
   fifo #(.DepthLog2(2), .Width(Xlen + Ilen)) fifo_inst (
     .clk_i(clk_i),
-    .rst_i(fifo_rst),
+    .rst_ni(!fifo_rst),
     .wr_valid_i(fifo_wr_valid),
     .wr_data_i(fifo_wr_data),
     .wr_ready_o(),

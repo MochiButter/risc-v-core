@@ -1,7 +1,7 @@
 module csr import core_pkg::*;
   #(parameter logic [Xlen - 1:0] MHartId = 0)
   (input  logic clk_i
-  ,input  logic rst_i
+  ,input  logic rst_ni
 
   ,input  logic valid_i
   ,input  csr_op_e csr_op_i
@@ -134,7 +134,7 @@ module csr import core_pkg::*;
   end
 
   always_ff @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_ni) begin
       mtvec_q <= '0;
       mscratch_q <= '0;
       mepc_q <= '0;

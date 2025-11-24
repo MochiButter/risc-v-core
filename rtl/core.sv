@@ -1,6 +1,6 @@
 module core import core_pkg::*;
   (input logic clk_i
-  ,input logic rst_i
+  ,input logic rst_ni
 
   ,input  logic                    instmem_ready_i
   ,output logic                    instmem_valid_o
@@ -84,7 +84,7 @@ module core import core_pkg::*;
 
   fetch #() fetch_inst (
     .clk_i(clk_i),
-    .rst_i(rst_i),
+    .rst_ni(rst_ni),
     .control_hazard_i(control_hazard),
     .pc_target_i(pc_target),
     .mem_ready_i(instmem_ready_i),
@@ -155,7 +155,7 @@ module core import core_pkg::*;
 
   register #(.RegWidth(Xlen)) reg_inst (
     .clk_i(clk_i),
-    .rst_i(rst_i),
+    .rst_ni(rst_ni),
     .rs1_addr_i(rs1_addr),
     .rs2_addr_i(rs2_addr),
     .rd_addr_i(rd_addr),
@@ -167,7 +167,7 @@ module core import core_pkg::*;
 
   csr #(.MHartId('h0)) csr_inst (
     .clk_i(clk_i),
-    .rst_i(rst_i),
+    .rst_ni(rst_ni),
     .valid_i(inst_valid),
     .csr_op_i(csrop),
     .rs1_data_i(csr_rs1_data),
@@ -180,7 +180,7 @@ module core import core_pkg::*;
 
   mem_lsu #() lsu_inst (
     .clk_i(clk_i),
-    .rst_i(rst_i),
+    .rst_ni(rst_ni),
 
     .valid_inst_i(inst_valid),
     .mem_type_i(mem_type),

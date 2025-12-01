@@ -22,6 +22,12 @@ package core_pkg;
     JmpNone, JmpBr, JmpJal, JmpJalr
   } jump_type_e;
 
+  typedef enum logic [4:0] {
+    OpAdd, OpSub, OpXor, OpOr, OpAnd, OpSll, OpSrl, OpSra, OpSlt, OpSltu,
+    OpBeq, OpBne, OpBlt, OpBge, OpBltu, OpBgeu,
+    OpAddw, OpSubw, OpSllw, OpSrlw, OpSraw
+  } alu_op_e;
+
   typedef enum logic [3:0] {
     OpCSRNone,
     OpCSRRW, OpCSRRdonly, OpCSRRS, OpCSRRC,

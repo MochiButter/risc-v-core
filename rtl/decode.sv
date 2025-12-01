@@ -5,7 +5,7 @@ module decode import core_pkg::*;
   ,output jump_type_e        jump_type_o
   ,output reg_wb_src_e       reg_wb_src_o
 
-  ,output aluop_e            aluop_o
+  ,output alu_op_e           alu_op_o
   ,output mem_type_e         mem_type_o
 
   ,output logic [4:0]        rs1_addr_o
@@ -32,9 +32,12 @@ module decode import core_pkg::*;
     OpSys    = 7'b1110011
   } opcode_e;
 
-  logic [6:0] opcode;
+  logic [6:0] opcode, funct7;
+  logic [4:0] funct5;
   logic [2:0] funct3;
   assign opcode = inst_i[6:0];
+  assign funct7 = inst_i[31:25];
+  assign funct5 = funct7[6:2];
   assign funct3 = inst_i[14:12];
 
   assign rs1_addr_o = inst_i[19:15];
@@ -63,32 +66,64 @@ module decode import core_pkg::*;
     inst_type_o = Rtype;
     jump_type_o = JmpNone;
     reg_wb_src_o = WbNone;
-    aluop_o = Add;
+    alu_op_o = OpAdd;
     mem_type_o = MemNone;
     csr_op_o = OpCSRNone;
 
     case (opcode)
       OpALU: begin
+        case (funct3)
+          3'h0: alu_op_o = alu_op_e'((funct7 == 7'h20) ? OpSub : OpAdd);
+          3'h4: alu_op_o = OpXor;
+          3'h6: alu_op_o = OpOr;
+          3'h7: alu_op_o = OpAnd;
+          3'h1: alu_op_o = OpSll;
+          3'h5: alu_op_o = alu_op_e'((funct5 == 5'h08) ? OpSra : OpSrl);
+          3'h2: alu_op_o = OpSlt;
+          3'h3: alu_op_o = OpSltu;
+        endcase
+
         inst_type_o = Rtype;
         reg_wb_src_o = WbAlu;
-        aluop_o = Funct;
       end
       OpALUImm: begin
+        case (funct3)
+          3'h0: alu_op_o = OpAdd;
+          3'h4: alu_op_o = OpXor;
+          3'h6: alu_op_o = OpOr;
+          3'h7: alu_op_o = OpAnd;
+          3'h1: alu_op_o = OpSll;
+          3'h5: alu_op_o = alu_op_e'((funct5 == 5'h08) ? OpSra : OpSrl);
+          3'h2: alu_op_o = OpSlt;
+          3'h3: alu_op_o = OpSltu;
+        endcase
+
         inst_type_o = Itype;
         reg_wb_src_o = WbAlu;
         imm_o = imm_i;
-        aluop_o = Funct;
       end
       OpALU32: begin
+        case (funct3)
+          3'h0: alu_op_o = alu_op_e'((funct7 == 7'h20) ? OpSubw : OpAddw);
+          3'h1: alu_op_o = OpSllw;
+          3'h5: alu_op_o = alu_op_e'((funct7 == 7'h20) ? OpSraw : OpSrlw);
+          default: ;
+        endcase
+
         inst_type_o = Rtype;
         reg_wb_src_o = WbAlu;
-        aluop_o = Op32;
       end
       OpALU32I: begin
+        case (funct3)
+          3'h0: alu_op_o = OpAddw;
+          3'h1: alu_op_o = OpSllw;
+          3'h5: alu_op_o = alu_op_e'((funct7 == 7'h20) ? OpSraw : OpSrlw);
+          default: ;
+        endcase
+
         inst_type_o = Itype;
         reg_wb_src_o = WbAlu;
         imm_o = imm_i;
-        aluop_o = Op32;
       end
       OpLoad: begin
         inst_type_o = Itype;
@@ -102,6 +137,16 @@ module decode import core_pkg::*;
         mem_type_o = MemStore;
       end
       OpBranch: begin
+        case (funct3)
+          3'h0: alu_op_o = OpBeq;
+          3'h1: alu_op_o = OpBne;
+          3'h4: alu_op_o = OpBlt;
+          3'h5: alu_op_o = OpBge;
+          3'h6: alu_op_o = OpBltu;
+          3'h7: alu_op_o = OpBgeu;
+          default: ;
+        endcase
+
         inst_type_o = Btype;
         jump_type_o = JmpBr;
         imm_o = imm_b;

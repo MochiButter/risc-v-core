@@ -206,3 +206,11 @@ async def test_csr(dut):
     assert dut.reg_inst.regs_q[4].get() == 0x800000000000000b
     assert dut.reg_inst.regs_q[5].get() == 0x20
     assert dut.reg_inst.regs_q[6].get() == 0x24
+
+@cocotb.test()
+async def test_rv64(dut):
+    await run_program(dut, "rv64.bin")
+    assert dut.reg_inst.regs_q[5].get().to_unsigned() == 0xffffffffdeadbeef
+    assert dut.reg_inst.regs_q[6].get() == 0x1
+    assert dut.reg_inst.regs_q[7].get() == 0xffffffffffffffff
+    assert dut.reg_inst.regs_q[8].get() == 0x200000001

@@ -30,7 +30,7 @@ module core import core_pkg::*;
   logic [Xlen - 1:0] inst_imm;
   inst_type_e inst_type;
   jump_type_e jump_type;
-  aluop_e aluop;
+  alu_op_e alu_op;
   reg_wb_src_e reg_wb_src;
   mem_type_e mem_type;
   csr_op_e csrop;
@@ -38,14 +38,12 @@ module core import core_pkg::*;
   logic csr_use_imm, reg_wb_en;
 
   logic [2:0] funct3;
-  logic [6:0] funct7;
   assign funct3 = inst_data[14:12];
-  assign funct7 = inst_data[31:25];
 
   logic [4:0] rs1_addr, rs2_addr, rd_addr;
 
   /* ALU signals */
-  logic alu_zero;
+  logic branch_take;
   logic [Xlen - 1:0] alu_res;
 
   /* Register signals */
@@ -67,7 +65,7 @@ module core import core_pkg::*;
   assign jalr_slice = {alu_res[Xlen - 1:1], 1'b0};
   assign control_hazard = inst_valid && (
     (jump_type == JmpJal || jump_type == JmpJalr) ||
-    (jump_type == JmpBr && alu_zero) ||
+    (jump_type == JmpBr && branch_take) ||
     csr_raise_trap
   );
 
@@ -108,8 +106,6 @@ module core import core_pkg::*;
     endcase
   end
 
-
-  // when current instruction is valid, and when the memop finishes
   assign reg_wb_en = (reg_wb_src != WbNone) && inst_valid && !mem_busy;
 
   decode #() decode_inst (
@@ -118,7 +114,7 @@ module core import core_pkg::*;
     .inst_type_o(inst_type),
     .jump_type_o(jump_type),
     .reg_wb_src_o(reg_wb_src),
-    .aluop_o(aluop),
+    .alu_op_o(alu_op),
     .mem_type_o(mem_type),
     .rs1_addr_o(rs1_addr),
     .rs2_addr_o(rs2_addr),
@@ -129,7 +125,6 @@ module core import core_pkg::*;
   );
 
   logic [Xlen - 1:0] alu_a, alu_b;
-
   always_comb begin
     case (inst_type)
       Rtype, Btype: begin alu_a = rs1_data; alu_b = rs2_data; end
@@ -139,18 +134,12 @@ module core import core_pkg::*;
     endcase
   end
 
-  logic is_itype;
-  assign is_itype = inst_type == Itype;
-
   alu #() alu_inst (
-    .funct3_i(funct3),
-    .funct7_i(funct7),
-    .itype_i(is_itype),
-    .aluop_i(aluop),
+    .alu_op_i(alu_op),
     .a_i(alu_a),
     .b_i(alu_b),
     .res_o(alu_res),
-    .zero_o(alu_zero)
+    .branch_take_o(branch_take)
   );
 
   register #(.RegWidth(Xlen)) reg_inst (

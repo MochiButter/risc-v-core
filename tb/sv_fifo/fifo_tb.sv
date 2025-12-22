@@ -23,7 +23,7 @@ module fifo_tb();
     `endif
   end
 
-  logic [0:0] clk_i, rst_i;
+  logic [0:0] clk_i, rst_ni;
   logic [0:0] wr_valid_i, wr_ready_o, rd_ready_i, rd_valid_o;
   logic [Width - 1:0] wr_data_i, rd_data_o;
   int count, tmp_count, random;
@@ -44,17 +44,18 @@ module fifo_tb();
     rd_ready_i = 1'b0;
     fifo_qu.delete();
     count = 0;
-    rst_i = 1'b0;
+    rst_ni = 1'b1;
     #10;
-    rst_i = 1'b1;
+    rst_ni = 1'b0;
     #20;
-    rst_i = 1'b0;
+    rst_ni = 1'b1;
     @(negedge clk_i);
   endtask
 
 `ifdef SIM_PIPELINE
   pipeline_reg_wrap pr_inst (.*);
 `else
+  logic wr_ready_two_o;
   fifo_wrap fifo_inst (.*);
 `endif
 
@@ -70,6 +71,13 @@ module fifo_tb();
       $display("\033[0;31mSIM FAILED\033[0m");
       $finish();
     end
+`ifndef SIM_PIPELINE
+    if (Depth - count < 2 && wr_ready_two_o) begin
+      $display("Fifo gave the wrong info on two empty slots");
+      $display("\033[0;31mSIM FAILED\033[0m");
+      $finish();
+    end
+`endif
     if ((wr_valid_i && tmp_count < Depth)
       || (Depth == 1 && wr_valid_i && rd_ready_i)) begin
       if (!wr_ready_o) begin
@@ -101,14 +109,14 @@ module fifo_tb();
       end
     end
     @(negedge clk_i);
-    if (rst_i) begin
+    if (!rst_ni) begin
       fifo_qu.delete();
       count = 0;
     end
     rd_ready_i = 1'b0;
     wr_valid_i = 1'b0;
     wr_data_i = '0;
-    rst_i = 1'b0;
+    rst_ni = 1'b1;
   endtask
 
   initial begin
@@ -161,7 +169,7 @@ module fifo_tb();
         rd_ready_i = 1'b1;
         if (verbose) $display("rdwr");
       end else if (random == 6) begin
-        rst_i = 1'b1;
+        rst_ni = 1'b0;
         if (verbose) $display("Flush");
       end else begin
         if (verbose) $display("Delay");

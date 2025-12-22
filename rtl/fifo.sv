@@ -91,7 +91,7 @@ module fifo
 
   assign addr_equal = (ptr_write_q == ptr_read_q);
   assign wr_ready_o = !(addr_equal && last_wr_q);
-  assign wr_ready_two_o = !(ptr_write_two == ptr_read_q);
+  assign wr_ready_two_o = wr_ready_o && !(ptr_write_two == ptr_read_q);
   assign rd_valid_o = !(addr_equal && last_rd_q);
   assign rd_data_o = forward_data_q ? rd_data_reg : rd_data_mem;
 endmodule

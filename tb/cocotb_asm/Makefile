@@ -9,6 +9,7 @@ endif
 ROOT_DIR := $(PWD)/../..
 
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/pipeline_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/alu.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/decode.sv
@@ -18,6 +19,7 @@ VERILOG_SOURCES += $(ROOT_DIR)/rtl/fetch.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/mem_lsu.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/register.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/csr.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/pipeline_reg.sv
 
 COCOTB_TOPLEVEL = core
 

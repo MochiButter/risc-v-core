@@ -22,6 +22,7 @@ module pipeline_reg
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin
       rd_valid_q <= 1'b0;
+      rd_data_q <= '0;
     end else begin
       if (write) begin
         rd_data_q <= wr_data_i;

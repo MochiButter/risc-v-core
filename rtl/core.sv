@@ -1,4 +1,6 @@
-module core import core_pkg::*;
+module core
+  import core_pkg::*;
+  import pipeline_pkg::*;
   (input logic clk_i
   ,input logic rst_ni
 
@@ -19,173 +21,293 @@ module core import core_pkg::*;
   ,input  logic                    datamem_rvalid_i
   );
 
+  logic idex_wr_valid, idex_wr_ready,
+    idex_rd_ready, idex_rd_valid;
+  idex_reg_t idex_d, idex_q;
+
+  logic exmem_wr_valid, exmem_wr_ready,
+    exmem_rd_ready, exmem_rd_valid;
+  exmem_reg_t exmem_d, exmem_q;
+
+  logic memwb_wr_valid, memwb_wr_ready,
+    memwb_rd_ready, memwb_rd_valid;
+  memwb_reg_t memwb_d, memwb_q;
+
   /* Instruction fetch signals */
-  logic inst_valid;
-  logic [Xlen - 1:0] inst_pc;
-  logic [Ilen - 1:0] inst_data;
+  logic [Xlen - 1:0] ifs_inst_pc;
+  logic [Ilen - 1:0] ifs_inst_data;
   assign instmem_wmask_o = '0;
   assign instmem_wdata_o = 'x;
 
-  /* Decode signals */
-  logic [Xlen - 1:0] inst_imm;
-  inst_type_e inst_type;
-  jump_type_e jump_type;
-  alu_op_e alu_op;
-  reg_wb_src_e reg_wb_src;
-  mem_type_e mem_type;
-  csr_op_e csrop;
-  logic [11:0] csr_addr;
-  logic csr_use_imm, reg_wb_en;
-
-  logic [2:0] funct3;
-  assign funct3 = inst_data[14:12];
-
-  logic [4:0] rs1_addr, rs2_addr, rd_addr;
-
-  /* ALU signals */
-  logic branch_take;
-  logic [Xlen - 1:0] alu_res;
-
   /* Register signals */
-  logic [Xlen - 1:0] rs1_data, rs2_data;
-  logic [Xlen - 1:0] rd_data;
+  logic [Xlen - 1:0] exs_rs1_data, exs_rs2_data;
+  logic [Xlen - 1:0] wbs_rd_data;
 
-  /* CSR signals */
-  logic [Xlen - 1:0] csr_rs1_data, csr_rd_data, csr_trap_vector;
-  assign csr_rs1_data = csr_use_imm ? inst_imm : rs1_data;
-  logic csr_raise_trap;
+  /* Mem stage jump signals */
+  logic [Xlen - 1:0] mems_pc_target;
+  logic mems_control_hazard, pipeline_rst;
+  assign pipeline_rst = rst_ni && !mems_control_hazard;
 
-  /* Data memory signals */
-  logic mem_busy;
-  logic [Xlen - 1:0] load_data;
+  /* Data hazard signals */
+  logic exmem_data_hazard, exwb_data_hazard, ex_data_hazard;
+  assign exmem_data_hazard = exmem_rd_valid && exmem_q.reg_wb_src != WbNone &&
+    (idex_q.rs1_addr == exmem_q.rd_addr || idex_q.rs2_addr == exmem_q.rd_addr);
+  assign exwb_data_hazard = memwb_rd_valid && memwb_q.reg_wb_src != WbNone &&
+    (idex_q.rs1_addr == memwb_q.rd_addr || idex_q.rs2_addr == memwb_q.rd_addr);
+  assign ex_data_hazard = exmem_data_hazard || exwb_data_hazard;
 
-  logic control_hazard;
-  logic [Xlen - 1:0] jalr_slice, pc_target;
-
-  assign jalr_slice = {alu_res[Xlen - 1:1], 1'b0};
-  assign control_hazard = inst_valid && (
-    (jump_type == JmpJal || jump_type == JmpJalr) ||
-    (jump_type == JmpBr && branch_take) ||
-    csr_raise_trap
-  );
-
-  always_comb begin
-    pc_target = 'x;
-    if (control_hazard && jump_type == JmpJalr) begin
-      pc_target = jalr_slice;
-    end else if (control_hazard && csr_raise_trap) begin
-      pc_target = csr_trap_vector;
-    end else if (control_hazard) begin
-      pc_target = inst_pc + inst_imm;
-    end
-  end
+  /* verilator lint_off UNUSEDSIGNAL */
+  logic test_mems_valid, test_mems_busy;
+  assign test_mems_valid = exmem_rd_valid;
+  assign test_mems_busy = !exmem_rd_ready;
+  logic [Xlen - 1:0] test_mems_pc;
+  assign test_mems_pc = exmem_q.inst_pc;
+  logic test_mems_ebreak;
+  assign test_mems_ebreak = (exmem_q.csr_op == OpEbreak);
+  /* verilator lint_on UNUSEDSIGNAL */
 
   fetch #() fetch_inst (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-    .control_hazard_i(control_hazard),
-    .pc_target_i(pc_target),
-    .mem_ready_i(instmem_ready_i),
-    .mem_valid_o(instmem_valid_o),
-    .mem_addr_o(instmem_addr_o),
-    .mem_rdata_i(instmem_rdata_i),
-    .mem_rvalid_i(instmem_rvalid_i),
-    .inst_ready_i(!mem_busy),
-    .inst_pc_o(inst_pc),
-    .inst_data_o(inst_data),
-    .inst_valid_o(inst_valid)
+    .clk_i            (clk_i),
+    .rst_ni           (rst_ni),
+    .control_hazard_i (mems_control_hazard),
+    .pc_target_i      (mems_pc_target),
+    .mem_ready_i      (instmem_ready_i),
+    .mem_valid_o      (instmem_valid_o),
+    .mem_addr_o       (instmem_addr_o),
+    .mem_rdata_i      (instmem_rdata_i),
+    .mem_rvalid_i     (instmem_rvalid_i),
+    .inst_ready_i     (idex_wr_ready),
+    .inst_pc_o        (ifs_inst_pc),
+    .inst_data_o      (ifs_inst_data),
+    .inst_valid_o     (idex_wr_valid)
   );
 
-  always_comb begin
-    case (reg_wb_src)
-      WbLsu: rd_data = load_data;
-      WbCsr: rd_data = csr_rd_data;
-      WbLui: rd_data = inst_imm;
-      WbJmp: rd_data = inst_pc + 4;
-      default: rd_data = alu_res;
-    endcase
-  end
-
-  assign reg_wb_en = (reg_wb_src != WbNone) && inst_valid && !mem_busy;
+  /* ===== [IF -> ID] ===== */
+  /* The fifo is integrated inside of the fetch module */
 
   decode #() decode_inst (
-    .inst_i(inst_data),
-    .imm_o(inst_imm),
-    .inst_type_o(inst_type),
-    .jump_type_o(jump_type),
-    .reg_wb_src_o(reg_wb_src),
-    .alu_op_o(alu_op),
-    .mem_type_o(mem_type),
-    .rs1_addr_o(rs1_addr),
-    .rs2_addr_o(rs2_addr),
-    .rd_addr_o(rd_addr),
-    .csr_op_o(csrop),
-    .csr_imm_o(csr_use_imm),
-    .csr_addr_o(csr_addr)
+    .inst_i       (ifs_inst_data),
+    .imm_o        (idex_d.inst_imm),
+    .inst_type_o  (idex_d.inst_type),
+    .alu_op_o     (idex_d.alu_op),
+    .rs1_addr_o   (idex_d.rs1_addr),
+    .rs2_addr_o   (idex_d.rs2_addr),
+    .mem_type_o   (idex_d.mem_type),
+    .csr_op_o     (idex_d.csr_op),
+    .csr_imm_o    (idex_d.csr_use_imm),
+    .csr_addr_o   (idex_d.csr_addr),
+    .jump_type_o  (idex_d.jump_type),
+    .reg_wb_src_o (idex_d.reg_wb_src),
+    .rd_addr_o    (idex_d.rd_addr)
   );
 
+  assign idex_d.inst_pc = ifs_inst_pc;
+  assign idex_d.funct3 = ifs_inst_data[14:12];
+
+  pipeline_reg #(.Width($bits(idex_reg_t))) pipeline_idex (
+    .clk_i      (clk_i),
+    .rst_ni     (pipeline_rst),
+    .wr_valid_i (idex_wr_valid),
+    .wr_data_i  (idex_d),
+    .wr_ready_o (idex_wr_ready),
+    .rd_ready_i (idex_rd_ready),
+    .rd_data_o  (idex_q),
+    .rd_valid_o (idex_rd_valid)
+  );
+
+  /* ===== [ID -> EX] ===== */
+
   logic [Xlen - 1:0] alu_a, alu_b;
+  logic [Xlen - 1:0] alu_imm, alu_pc;
+  inst_type_e alu_inst_type;
+  assign alu_imm = idex_q.inst_imm;
+  assign alu_pc = idex_q.inst_pc;
+  assign alu_inst_type = idex_q.inst_type;
+
   always_comb begin
-    case (inst_type)
-      Rtype, Btype: begin alu_a = rs1_data; alu_b = rs2_data; end
-      Itype, Stype: begin alu_a = rs1_data; alu_b = inst_imm; end
-      Utype:        begin alu_a = inst_pc;  alu_b = inst_imm; end
-      default:      begin alu_a = 'x;       alu_b = 'x;       end
+    case (alu_inst_type)
+      Rtype, Btype: begin alu_a = exs_rs1_data; alu_b = exs_rs2_data; end
+      Itype, Stype: begin alu_a = exs_rs1_data; alu_b = alu_imm;      end
+      Utype:        begin alu_a = alu_pc;       alu_b = alu_imm;      end
+      default:      begin alu_a = 'x;           alu_b = 'x;           end
     endcase
   end
 
   alu #() alu_inst (
-    .alu_op_i(alu_op),
-    .a_i(alu_a),
-    .b_i(alu_b),
-    .res_o(alu_res),
-    .branch_take_o(branch_take)
+    .alu_op_i      (idex_q.alu_op),
+    .a_i           (alu_a),
+    .b_i           (alu_b),
+    .res_o         (exmem_d.alu_res),
+    .branch_take_o (exmem_d.branch_take)
   );
 
-  register #(.RegWidth(Xlen)) reg_inst (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-    .rs1_addr_i(rs1_addr),
-    .rs2_addr_i(rs2_addr),
-    .rd_addr_i(rd_addr),
-    .rd_data_i(rd_data),
-    .rd_write_en_i(reg_wb_en),
-    .rs1_data_o(rs1_data),
-    .rs2_data_o(rs2_data)
+  assign idex_rd_ready  = exmem_wr_ready && !ex_data_hazard;
+  assign exmem_wr_valid = idex_rd_valid && !ex_data_hazard;
+
+  /* To Mem, Wb */
+  assign exmem_d.inst_pc     = idex_q.inst_pc;
+  assign exmem_d.inst_imm    = idex_q.inst_imm;
+
+  /* To Mem */
+  assign exmem_d.rs1_data    = exs_rs1_data;
+  assign exmem_d.rs2_data    = exs_rs2_data;
+
+  assign exmem_d.mem_type    = idex_q.mem_type;
+  assign exmem_d.funct3      = idex_q.funct3;
+
+  assign exmem_d.csr_op      = idex_q.csr_op;
+  assign exmem_d.csr_addr    = idex_q.csr_addr;
+  assign exmem_d.csr_use_imm = idex_q.csr_use_imm;
+
+  assign exmem_d.jump_type   = idex_q.jump_type;
+
+  /* To Wb */
+  assign exmem_d.reg_wb_src  = idex_q.reg_wb_src;
+  assign exmem_d.rd_addr     = idex_q.rd_addr;
+
+  pipeline_reg #(.Width($bits(exmem_reg_t))) pipeline_exmem (
+    .clk_i      (clk_i),
+    .rst_ni     (pipeline_rst),
+    .wr_valid_i (exmem_wr_valid),
+    .wr_data_i  (exmem_d),
+    .wr_ready_o (exmem_wr_ready),
+    .rd_ready_i (exmem_rd_ready),
+    .rd_data_o  (exmem_q),
+    .rd_valid_o (exmem_rd_valid)
   );
+
+  /* ===== [EX -> MEM] ===== */
+
+  logic mems_busy;
+
+  /* Mux csr data in */
+  logic [Xlen - 1:0] mems_csr_rs1_data, mems_csr_trap_vector;
+  assign mems_csr_rs1_data = exmem_q.csr_use_imm ?
+    exmem_q.inst_imm : exmem_q.rs1_data;
+  logic mems_csr_raise_trap;
+
+  /* Compute jump target */
+  logic [Xlen - 1:0] mems_load_data;
+  logic [Xlen - 1:0] mems_jalr_slice;
+
+  assign mems_jalr_slice = {exmem_q.alu_res[Xlen - 1:1], 1'b0};
+  assign mems_control_hazard = exmem_rd_valid && (
+    (exmem_q.jump_type == JmpJal || exmem_q.jump_type == JmpJalr) ||
+    (exmem_q.jump_type == JmpBr && exmem_q.branch_take) ||
+    mems_csr_raise_trap
+  );
+
+  jump_type_e mems_jump_type;
+  assign mems_jump_type = exmem_q.jump_type;
+  logic [Xlen - 1:0] mems_inst_pc, mems_inst_imm;
+  assign mems_inst_pc = exmem_q.inst_pc;
+  assign mems_inst_imm = exmem_q.inst_imm;
+
+  always_comb begin
+    mems_pc_target = 'x;
+    if (mems_control_hazard && mems_jump_type == JmpJalr) begin
+      mems_pc_target = mems_jalr_slice;
+    end else if (mems_control_hazard && mems_csr_raise_trap) begin
+      mems_pc_target = mems_csr_trap_vector;
+    end else if (mems_control_hazard) begin
+      mems_pc_target = mems_inst_pc + mems_inst_imm;
+    end
+  end
 
   csr #(.MHartId('h0)) csr_inst (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
-    .valid_i(inst_valid),
-    .csr_op_i(csrop),
-    .rs1_data_i(csr_rs1_data),
-    .csr_addr_i(csr_addr),
-    .rd_data_o(csr_rd_data),
-    .pc_i(inst_pc),
-    .raise_trap_o(csr_raise_trap),
-    .trap_vector_o(csr_trap_vector)
+    .clk_i         (clk_i),
+    .rst_ni        (rst_ni),
+    .valid_i       (exmem_rd_valid),
+    .csr_op_i      (exmem_q.csr_op),
+    .rs1_data_i    (mems_csr_rs1_data),
+    .csr_addr_i    (exmem_q.csr_addr),
+    .rd_data_o     (memwb_d.csr_rd_data),
+    .pc_i          (exmem_q.inst_pc),
+    .raise_trap_o  (mems_csr_raise_trap),
+    .trap_vector_o (mems_csr_trap_vector)
   );
 
   mem_lsu #() lsu_inst (
-    .clk_i(clk_i),
-    .rst_ni(rst_ni),
+    .clk_i        (clk_i),
+    .rst_ni       (rst_ni),
 
-    .valid_inst_i(inst_valid),
-    .mem_type_i(mem_type),
-    .addr_i(alu_res),
-    .wdata_i(rs2_data),
-    .funct3_i(funct3),
-    .rdata_o(load_data),
-    .mem_busy_o(mem_busy),
+    .valid_inst_i (exmem_rd_valid),
+    .mem_type_i   (exmem_q.mem_type),
+    .addr_i       (exmem_q.alu_res),
+    .wdata_i      (exmem_q.rs2_data),
+    .funct3_i     (exmem_q.funct3),
+    .rdata_o      (mems_load_data),
+    .mem_busy_o   (mems_busy),
 
-    .mem_ready_i(datamem_ready_i),
-    .mem_valid_o(datamem_valid_o),
-    .mem_addr_o(datamem_addr_o),
-    .mem_wdata_o(datamem_wdata_o),
-    .mem_wmask_o(datamem_wmask_o),
-    .mem_rdata_i(datamem_rdata_i),
-    .mem_rvalid_i(datamem_rvalid_i)
+    .mem_ready_i  (datamem_ready_i),
+    .mem_valid_o  (datamem_valid_o),
+    .mem_addr_o   (datamem_addr_o),
+    .mem_wdata_o  (datamem_wdata_o),
+    .mem_wmask_o  (datamem_wmask_o),
+    .mem_rdata_i  (datamem_rdata_i),
+    .mem_rvalid_i (datamem_rvalid_i)
   );
 
+  // wb is always ready to accept rd_data
+  assign memwb_rd_ready = 1'b1;
+
+  assign exmem_rd_ready = !mems_busy;
+  assign memwb_wr_valid = exmem_rd_valid && !mems_busy;
+
+  /* To Wb */
+  assign memwb_d.reg_wb_src = exmem_q.reg_wb_src;
+  assign memwb_d.load_data  = mems_load_data;
+  assign memwb_d.inst_imm   = exmem_q.inst_imm;
+  assign memwb_d.inst_pc    = exmem_q.inst_pc;
+  assign memwb_d.alu_res    = exmem_q.alu_res;
+  assign memwb_d.rd_addr    = exmem_q.rd_addr;
+
+  pipeline_reg #(.Width($bits(memwb_reg_t))) pipeline_memwb (
+    .clk_i      (clk_i),
+    .rst_ni     (rst_ni),
+    .wr_valid_i (memwb_wr_valid),
+    .wr_data_i  (memwb_d),
+    .wr_ready_o (memwb_wr_ready),
+    .rd_ready_i (memwb_rd_ready),
+    .rd_data_o  (memwb_q),
+    .rd_valid_o (memwb_rd_valid)
+  );
+
+  /* ===== [MEM -> WB] ===== */
+
+  logic wbs_reg_wb_en;
+
+  logic [Xlen - 1:0] wbs_load_data, wbs_csr_rd_data,
+    wbs_inst_imm, wbs_inst_pc, wbs_alu_res;
+  reg_wb_src_e wbs_reg_wb_src;
+  assign wbs_load_data   = memwb_q.load_data;
+  assign wbs_csr_rd_data = memwb_q.csr_rd_data;
+  assign wbs_inst_imm    = memwb_q.inst_imm;
+  assign wbs_inst_pc     = memwb_q.inst_pc;
+  assign wbs_alu_res     = memwb_q.alu_res;
+  assign wbs_reg_wb_src  = memwb_q.reg_wb_src;
+
+  always_comb begin
+    case (wbs_reg_wb_src)
+      WbLsu: wbs_rd_data   = wbs_load_data;
+      WbCsr: wbs_rd_data   = wbs_csr_rd_data;
+      WbLui: wbs_rd_data   = wbs_inst_imm;
+      WbJmp: wbs_rd_data   = wbs_inst_pc + 4;
+      default: wbs_rd_data = wbs_alu_res;
+    endcase
+  end
+
+  assign wbs_reg_wb_en = (memwb_q.reg_wb_src != WbNone) && memwb_rd_valid;
+
+  register #(.RegWidth(Xlen)) reg_inst (
+    .clk_i         (clk_i),
+    .rst_ni        (rst_ni),
+    .rs1_addr_i    (idex_q.rs1_addr),
+    .rs2_addr_i    (idex_q.rs2_addr),
+    .rd_addr_i     (memwb_q.rd_addr),
+    .rd_data_i     (wbs_rd_data),
+    .rd_write_en_i (wbs_reg_wb_en),
+    .rs1_data_o    (exs_rs1_data),
+    .rs2_data_o    (exs_rs2_data)
+  );
 endmodule

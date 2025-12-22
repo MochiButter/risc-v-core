@@ -109,14 +109,19 @@ async def run_program(dut, filepath, check_mem=None):
 
     inst = 0
     count = 0
-    while inst != 0x00100073:
-        if dut.inst_valid.value == 1 and not dut.mem_busy.value:
-            pc = int(dut.inst_pc.value)
-            inst = int(dut.inst_data.value)
-            logger.info(f"[0x{pc:016x}] 0x{inst:08x}")
+    ebreak = 0
+    #while inst != 0x00100073:
+    while ebreak != 1:
+        if dut.test_mems_valid.value and not dut.test_mems_busy.value:
+            pc = int(dut.test_mems_pc.value)
+            #inst = int(dut.inst_data.value)
+            ebreak = dut.test_mems_ebreak.value
+            #logger.info(f"[0x{pc:016x}] 0x{inst:08x}")
+            instruction = instmem.mem[pc >> 3] & 0xffffffff if pc % 8 == 0 else instmem.mem[pc >> 3] >> 32
+            logger.info(f"[0x{pc:016x}] 0x{instruction:08x}")
         await dut.clk_i.rising_edge
         count += 1
-        if count > 100:
+        if count > 500:
             logger.error("Timeout reached")
             assert(0)
             break

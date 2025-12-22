@@ -124,10 +124,10 @@ module csr import core_pkg::*;
       mcause_d = mcause_tmp;
     end else if (valid_i && csr_wsc) begin
       case (csr_addr_i)
-        CSRmtvec:    mtvec_d = mtvec_mask;
+        CSRmtvec:    mtvec_d    = mtvec_mask;
         CSRmscratch: mscratch_d = csr_wdata;
-        CSRmepc:     mepc_d = csr_wdata;
-        CSRmcause:   mcause_d = csr_wdata;
+        CSRmepc:     mepc_d     = csr_wdata;
+        CSRmcause:   mcause_d   = csr_wdata;
         default: ;
       endcase
     end
@@ -135,15 +135,15 @@ module csr import core_pkg::*;
 
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin
-      mtvec_q <= '0;
+      mtvec_q    <= '0;
       mscratch_q <= '0;
-      mepc_q <= '0;
-      mcause_q <= '0;
+      mepc_q     <= '0;
+      mcause_q   <= '0;
     end else begin
-      mtvec_q <= mtvec_d;
+      mtvec_q    <= mtvec_d;
       mscratch_q <= mscratch_d;
-      mepc_q <= mepc_d;
-      mcause_q <= mcause_d;
+      mepc_q     <= mepc_d;
+      mcause_q   <= mcause_d;
     end
   end
 endmodule

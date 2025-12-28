@@ -40,26 +40,21 @@ module decode import core_pkg::*;
   assign funct5 = funct7[6:2];
   assign funct3 = inst_i[14:12];
 
-  assign rs1_addr_o = inst_i[19:15];
-  assign rs2_addr_o = inst_i[24:20];
+  logic [4:0] rs1_bits, rs2_bits;
+  assign rs1_bits = inst_i[19:15];
+  assign rs2_bits = inst_i[24:20];
   assign rd_addr_o = inst_i[11:7];
 
   assign csr_addr_o = inst_i[31:20];
   assign csr_imm_o = funct3[2];
 
-  localparam imm_i_rep_bits = Xlen - 12;
-  localparam imm_s_rep_bits = Xlen - 12;
-  localparam imm_b_rep_bits = Xlen - 13;
-  localparam imm_u_rep_bits = Xlen - 32;
-  localparam imm_j_rep_bits = Xlen - 21;
-  localparam imm_sys_rep_bits = Xlen - 5;
   logic [Xlen - 1:0] imm_i, imm_s, imm_b, imm_u, imm_j, imm_sys;
-  assign imm_i = {{imm_i_rep_bits{inst_i[31]}}, inst_i[31:20]};
-  assign imm_s = {{imm_s_rep_bits{inst_i[31]}}, inst_i[31:25], inst_i[11:7]};
-  assign imm_b = {{imm_b_rep_bits{inst_i[31]}}, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
-  assign imm_u = {{imm_u_rep_bits{inst_i[31]}}, inst_i[31:12], 12'b0};
-  assign imm_j = {{imm_j_rep_bits{inst_i[31]}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
-  assign imm_sys = {{imm_sys_rep_bits{1'b0}}, inst_i[19:15]};
+  assign imm_i = {{Xlen - 12{inst_i[31]}}, inst_i[31:20]};
+  assign imm_s = {{Xlen - 12{inst_i[31]}}, inst_i[31:25], inst_i[11:7]};
+  assign imm_b = {{Xlen - 13{inst_i[31]}}, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
+  assign imm_u = {{Xlen - 32{inst_i[31]}}, inst_i[31:12], 12'b0};
+  assign imm_j = {{Xlen - 21{inst_i[31]}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+  assign imm_sys = {{Xlen - 5{1'b0}}, inst_i[19:15]};
 
   always_comb begin
     imm_o = 'x;
@@ -177,7 +172,7 @@ module decode import core_pkg::*;
         inst_type_o = Itype;
         case (funct3)
           3'h0: begin
-            if (rs1_addr_o != '0 || rd_addr_o != '0) begin
+            if (rs1_bits != '0 || rd_addr_o != '0) begin
               // invalid instruction
               // Not the case for SFENCE.VM
             end
@@ -191,14 +186,20 @@ module decode import core_pkg::*;
             endcase
           end
           3'h1, 3'h5: csr_op_o = OpCSRRW;
-          3'h2, 3'h6: csr_op_o = csr_op_e'((rs1_addr_o == '0) ? OpCSRRdonly : OpCSRRS);
-          3'h3, 3'h7: csr_op_o = csr_op_e'((rs1_addr_o == '0) ? OpCSRRdonly : OpCSRRC);
+          3'h2, 3'h6: csr_op_o = csr_op_e'((rs1_bits == '0) ? OpCSRRdonly : OpCSRRS);
+          3'h3, 3'h7: csr_op_o = csr_op_e'((rs1_bits == '0) ? OpCSRRdonly : OpCSRRC);
           default: ;
         endcase
         reg_wb_src_o = WbCsr;
         imm_o = imm_sys;
       end
       default: ;
+    endcase
+
+    case (inst_type_o)
+      Rtype, Btype, Stype: begin rs1_addr_o = rs1_bits; rs2_addr_o = rs2_bits; end
+      Itype:               begin rs1_addr_o = rs1_bits; rs2_addr_o = '0;       end
+      default:             begin rs1_addr_o = '0;       rs2_addr_o = '0;       end
     endcase
   end
 endmodule

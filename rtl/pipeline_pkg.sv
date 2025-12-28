@@ -10,10 +10,12 @@ package pipeline_pkg;
     logic [Xlen - 1:0] inst_pc;
     logic [Xlen - 1:0] inst_imm;
 
+    /* To Ex, Mem */
+    logic [4:0] rs1_addr, rs2_addr;
+
     /* To Ex */
     inst_type_e inst_type;
     alu_op_e alu_op;
-    logic [4:0] rs1_addr, rs2_addr;
 
     /* To Mem */
     mem_type_e mem_type;
@@ -37,6 +39,7 @@ package pipeline_pkg;
     logic [Xlen - 1:0] alu_res;
 
     /* To Mem */
+    logic [4:0] rs1_addr, rs2_addr;
     logic [Xlen - 1:0] rs1_data, rs2_data;
 
     mem_type_e mem_type;

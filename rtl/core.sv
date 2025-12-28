@@ -21,16 +21,13 @@ module core
   ,input  logic                    datamem_rvalid_i
   );
 
-  logic idex_wr_valid, idex_wr_ready,
-    idex_rd_ready, idex_rd_valid;
+  logic idex_wr_valid, idex_wr_ready, idex_rd_ready, idex_rd_valid;
   idex_reg_t idex_d, idex_q;
 
-  logic exmem_wr_valid, exmem_wr_ready,
-    exmem_rd_ready, exmem_rd_valid;
+  logic exmem_wr_valid, exmem_wr_ready, exmem_rd_ready, exmem_rd_valid;
   exmem_reg_t exmem_d, exmem_q;
 
-  logic memwb_wr_valid, memwb_wr_ready,
-    memwb_rd_ready, memwb_rd_valid;
+  logic memwb_wr_valid, memwb_rd_valid;
   memwb_reg_t memwb_d, memwb_q;
 
   /* Instruction fetch signals */
@@ -48,14 +45,12 @@ module core
   logic mems_control_hazard, pipeline_rst;
   assign pipeline_rst = rst_ni && !mems_control_hazard;
 
-  /* Data hazard signals */
-  logic exmem_data_hazard, exwb_data_hazard, ex_data_hazard;
-  assign exmem_data_hazard = exmem_rd_valid && exmem_q.reg_wb_src != WbNone &&
-    (idex_q.rs1_addr == exmem_q.rd_addr || idex_q.rs2_addr == exmem_q.rd_addr);
-  assign exwb_data_hazard = memwb_rd_valid && memwb_q.reg_wb_src != WbNone &&
-    (idex_q.rs1_addr == memwb_q.rd_addr || idex_q.rs2_addr == memwb_q.rd_addr);
-  assign ex_data_hazard = exmem_data_hazard || exwb_data_hazard;
+  /* Forwarding control */
+  logic mems_is_wb, wbs_is_wb;
+  assign mems_is_wb = exmem_rd_valid && exmem_q.reg_wb_src != WbNone;
+  assign wbs_is_wb  = memwb_rd_valid && memwb_q.reg_wb_src != WbNone;
 
+  /* Signals for cocotb */
   /* verilator lint_off UNUSEDSIGNAL */
   logic test_mems_valid, test_mems_busy;
   assign test_mems_valid = exmem_rd_valid;
@@ -124,12 +119,31 @@ module core
   assign alu_pc = idex_q.inst_pc;
   assign alu_inst_type = idex_q.inst_type;
 
+  /* Frowarding control */
+  logic exs_mem_rs1_fwd, exs_mem_rs2_fwd, exs_wb_rs1_fwd, exs_wb_rs2_fwd;
+  assign exs_mem_rs1_fwd = mems_is_wb && idex_q.rs1_addr != '0 &&
+    idex_q.rs1_addr == exmem_q.rd_addr;
+  assign exs_mem_rs2_fwd = mems_is_wb && idex_q.rs2_addr != '0 &&
+    idex_q.rs2_addr == exmem_q.rd_addr;
+  assign exs_wb_rs1_fwd  = wbs_is_wb  && idex_q.rs1_addr != '0 &&
+    idex_q.rs1_addr == memwb_q.rd_addr;
+  assign exs_wb_rs2_fwd  = wbs_is_wb  && idex_q.rs2_addr != '0 &&
+    idex_q.rs2_addr == memwb_q.rd_addr;
+
+  logic [Xlen - 1:0] exs_rs1_fwd, exs_rs2_fwd, mems_rd_data;
+  assign exs_rs1_fwd = exs_mem_rs1_fwd ? mems_rd_data :
+                       exs_wb_rs1_fwd ? wbs_rd_data :
+                       exs_rs1_data;
+  assign exs_rs2_fwd = exs_mem_rs2_fwd ? mems_rd_data :
+                       exs_wb_rs2_fwd ? wbs_rd_data :
+                       exs_rs2_data;
+
   always_comb begin
     case (alu_inst_type)
-      Rtype, Btype: begin alu_a = exs_rs1_data; alu_b = exs_rs2_data; end
-      Itype, Stype: begin alu_a = exs_rs1_data; alu_b = alu_imm;      end
-      Utype:        begin alu_a = alu_pc;       alu_b = alu_imm;      end
-      default:      begin alu_a = 'x;           alu_b = 'x;           end
+      Rtype, Btype: begin alu_a = exs_rs1_fwd; alu_b = exs_rs2_fwd; end
+      Itype, Stype: begin alu_a = exs_rs1_fwd; alu_b = alu_imm;     end
+      Utype:        begin alu_a = alu_pc;       alu_b = alu_imm;    end
+      default:      begin alu_a = 'x;           alu_b = 'x;         end
     endcase
   end
 
@@ -141,14 +155,16 @@ module core
     .branch_take_o (exmem_d.branch_take)
   );
 
-  assign idex_rd_ready  = exmem_wr_ready && !ex_data_hazard;
-  assign exmem_wr_valid = idex_rd_valid && !ex_data_hazard;
+  assign idex_rd_ready  = exmem_wr_ready;
+  assign exmem_wr_valid = idex_rd_valid;
 
   /* To Mem, Wb */
   assign exmem_d.inst_pc     = idex_q.inst_pc;
   assign exmem_d.inst_imm    = idex_q.inst_imm;
 
   /* To Mem */
+  assign exmem_d.rs1_addr    = idex_q.rs1_addr;
+  assign exmem_d.rs2_addr    = idex_q.rs2_addr;
   assign exmem_d.rs1_data    = exs_rs1_data;
   assign exmem_d.rs2_data    = exs_rs2_data;
 
@@ -180,10 +196,21 @@ module core
 
   logic mems_busy;
 
+  /* Frowarding control */
+  logic mems_wbs_rs1_fwd, mems_wbs_rs2_fwd;
+  assign mems_wbs_rs1_fwd = wbs_is_wb && exmem_q.rs1_addr != '0 &&
+    exmem_q.rs1_addr == memwb_q.rd_addr;
+  assign mems_wbs_rs2_fwd = wbs_is_wb && exmem_q.rs2_addr != '0 &&
+    exmem_q.rs2_addr == memwb_q.rd_addr;
+
+  logic [Xlen - 1:0] mems_rs1_fwd, mems_rs2_fwd;
+  assign mems_rs1_fwd = mems_wbs_rs1_fwd ? wbs_rd_data : exmem_q.rs1_data;
+  assign mems_rs2_fwd = mems_wbs_rs2_fwd ? wbs_rd_data : exmem_q.rs2_data;
+
   /* Mux csr data in */
   logic [Xlen - 1:0] mems_csr_rs1_data, mems_csr_trap_vector;
   assign mems_csr_rs1_data = exmem_q.csr_use_imm ?
-    exmem_q.inst_imm : exmem_q.rs1_data;
+    exmem_q.inst_imm : mems_rs1_fwd;
   logic mems_csr_raise_trap;
 
   /* Compute jump target */
@@ -234,7 +261,7 @@ module core
     .valid_inst_i (exmem_rd_valid),
     .mem_type_i   (exmem_q.mem_type),
     .addr_i       (exmem_q.alu_res),
-    .wdata_i      (exmem_q.rs2_data),
+    .wdata_i      (mems_rs2_fwd),
     .funct3_i     (exmem_q.funct3),
     .rdata_o      (mems_load_data),
     .mem_busy_o   (mems_busy),
@@ -248,8 +275,21 @@ module core
     .mem_rvalid_i (datamem_rvalid_i)
   );
 
-  // wb is always ready to accept rd_data
-  assign memwb_rd_ready = 1'b1;
+  logic [Xlen - 1:0] mems_csr_rd_data, mems_alu_res;
+  reg_wb_src_e mems_reg_wb_src;
+  assign mems_csr_rd_data = memwb_d.csr_rd_data;
+  assign mems_alu_res     = exmem_q.alu_res;
+  assign mems_reg_wb_src  = exmem_q.reg_wb_src;
+
+  always_comb begin
+    case (mems_reg_wb_src)
+      WbLsu: mems_rd_data   = mems_load_data;
+      WbCsr: mems_rd_data   = mems_csr_rd_data;
+      WbLui: mems_rd_data   = mems_inst_imm;
+      WbJmp: mems_rd_data   = mems_inst_pc + 4;
+      default: mems_rd_data = mems_alu_res;
+    endcase
+  end
 
   assign exmem_rd_ready = !mems_busy;
   assign memwb_wr_valid = exmem_rd_valid && !mems_busy;
@@ -262,13 +302,14 @@ module core
   assign memwb_d.alu_res    = exmem_q.alu_res;
   assign memwb_d.rd_addr    = exmem_q.rd_addr;
 
+  // wb is always ready to accept rd_data
   pipeline_reg #(.Width($bits(memwb_reg_t))) pipeline_memwb (
     .clk_i      (clk_i),
     .rst_ni     (rst_ni),
     .wr_valid_i (memwb_wr_valid),
     .wr_data_i  (memwb_d),
-    .wr_ready_o (memwb_wr_ready),
-    .rd_ready_i (memwb_rd_ready),
+    .wr_ready_o (),
+    .rd_ready_i (1'b1),
     .rd_data_o  (memwb_q),
     .rd_valid_o (memwb_rd_valid)
   );

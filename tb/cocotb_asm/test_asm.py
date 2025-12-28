@@ -214,7 +214,10 @@ async def test_csr(dut):
 
 @cocotb.test()
 async def test_rv64(dut):
-    await run_program(dut, "rv64.bin")
+    def check_mem(mem):
+        assert mem[12] == 0x200000001
+        assert mem[13] == 0x200000001
+    await run_program(dut, "rv64.bin", check_mem)
     assert dut.reg_inst.regs_q[5].get().to_unsigned() == 0xffffffffdeadbeef
     assert dut.reg_inst.regs_q[6].get() == 0x1
     assert dut.reg_inst.regs_q[7].get() == 0xffffffffffffffff

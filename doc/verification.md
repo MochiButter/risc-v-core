@@ -38,20 +38,22 @@ The directory `tb/uvm` contains the uvm testbench structure.
 It runs compiled files similar to cocotb, but allows for loading different data
 for the instruction and data memory.
 It's main usage for now is for [riscof](#riscv-arch-test).
-For usage refer to the uvm directory [readme](../tb/uvm/readme.md)
+For usage refer to the uvm [document](uvm.md)
 
 ## riscv-arch-test
 Prerequisites:
 
 - riscof
 - riscv-arch-test
-- sail-riscv
+- sail-riscv == 0.8
 - RISC-V GNU toolchain (assumes rv32i)
 - The [uvm testbench](#uvm-testbench)
 
 The test already assumes riscof and sail-riscv is installed and in the `PATH`,
 and that the environment variable `ARCH_TEST_DIR` points to the cloned
 riscv-arch-test repository.
+Sail must be version 0.8, otherwise the config json format will not be
+compatible with the riscof plugin.
 
 To install riscof to run without any additonal config:
 ```

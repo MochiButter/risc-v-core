@@ -3,3 +3,5 @@ build
 *.fst
 .venv
 __pycache__
+.svlint.toml
+.svls.toml

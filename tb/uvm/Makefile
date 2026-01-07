@@ -6,8 +6,9 @@ NPROC = $(shell nproc)
 # -------------------------------------
 # Testbench setup
 # -------------------------------------
-VERILATOR := verilator
+VERILATOR ?= verilator
 ifdef VERILATOR_ROOT
+$(info VERILATOR_ROOT=$(VERILATOR_ROOT))
 VERILATOR := $(VERILATOR_ROOT)/bin/verilator
 endif
 

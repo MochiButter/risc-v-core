@@ -21,6 +21,10 @@
 >             if isa_yaml['hart0']["PMP"]["implemented"] == True:
 >                 sail_config["memory"]["pmp"]["grain"] = pmp_flags["pmp-grain"]
 >                 sail_config["memory"]["pmp"]["count"] = pmp_flags["pmp-count"]
+127c130
+<         sail_config["extensions"]["Svrsw60t59b"]["supported"] = False
+---
+>         #sail_config["extensions"]["Svrsw60t59b"]["supported"] = False
 153c156
 <             execute += self.sail_exe + ' --config={0} --trace-all --signature-granularity=4  --test-signature={1} {2} > {3}.log 2>&1;'.format(sail_config_path, sig_file, elf, test_name)
 ---

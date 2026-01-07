@@ -83,7 +83,7 @@ class core(pluginTemplate):
 
           if self.target_run:
             simcmd = self.dut_exe + ' +UVM_TESTNAME=core_test_riscof +RISCOF_SIG_PATH={0} +TEXT_HEX=my_text.hex +DATA_HEX=my_data.hex'.format(sig_file)
-            simsmd = simcmd + " | tee {0}".format(log_file)
+            simcmd += " | tee {0}".format(log_file)
           else:
             simcmd = 'echo "NO RUN"'
 

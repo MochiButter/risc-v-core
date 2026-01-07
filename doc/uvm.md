@@ -8,10 +8,10 @@ Use `UVM_TEST` to specify which uvm test should be used.
 Set `UVM_TEST` to `core_test_riscof` to run the riscof testbench.
 Use `RISCOF_SIG_PATH` to specify the path to where the RISCOF signature file
 should be written to.
-The begin and end signature must be written to `32'h8000_0000` and
-`32'h8000_0004` respectively before terminating the test.
+The begin and end signature must be written to `0x80000000` and
+`0x80000008` respectively before terminating the test.
 The testbench is terminated when the core writes anything to the address
-`32'h8000_0000`
+`0x80000010`
 
 The makefile is based on the one used in
 [verilator-verification](https://github.com/antmicro/verilator-verification).
@@ -31,15 +31,20 @@ When the rvalid signal goes high after an item is passed to the sequencer, the
 monitor passes the completed transaction to the test class for checking.
 
 The current termination condition is hardcoded to be when the core writes
-`32'hdead_beef` to `32'h0000_00020`.
+`0xdeadbeef` to `0x000000038`.
 
 ## Running
 The testbench can be run with verilator, but a newer version must be used.
 
-Version 5.041 or above should work.
+Because of a bug with virtual interfaces, only versions between
 ```
 Verilator 5.041 devel rev v5.040-181-ga64774726
 ```
+and
+```
+Verilator 5.041 devel rev v5.040-242-g2c7476524
+```
+will work (maybe more).
 
 The modified uvm library files are also needed, which can be found
 [here](https://github.com/antmicro/uvm-verilator/tree/uvm-1.2-current-patches).

@@ -1,3 +1,6 @@
+.text
+.global _start
+_start:
 addi x1, x0, 0x42
 addi x2, x0, 0x64
 li x3, 0xdeadbeef

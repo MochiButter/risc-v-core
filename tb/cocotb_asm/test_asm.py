@@ -201,14 +201,14 @@ async def test_loop(dut):
     await run_program(dut, "loop.bin", check_mem)
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
-    assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xffffffffdeadbeef
+    assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xdeadbeef
 
 @cocotb.test()
 async def test_csr(dut):
     await run_program(dut, "csr.bin")
     assert dut.reg_inst.regs_q[2].get() == 0x14
     assert dut.reg_inst.regs_q[3].get() == 0x15
-    assert dut.reg_inst.regs_q[4].get() == 0x800000000000000b
+    assert dut.reg_inst.regs_q[4].get() == 0xb # Environment call from M-mode
     assert dut.reg_inst.regs_q[5].get() == 0x20
     assert dut.reg_inst.regs_q[6].get() == 0x24
 
@@ -222,3 +222,11 @@ async def test_rv64(dut):
     assert dut.reg_inst.regs_q[6].get() == 0x1
     assert dut.reg_inst.regs_q[7].get() == 0xffffffffffffffff
     assert dut.reg_inst.regs_q[8].get() == 0x200000001
+
+@cocotb.test()
+async def test_trap_illegal(dut):
+    await run_program(dut, "trap_illegal.bin")
+    assert dut.reg_inst.regs_q[8].get() == 0x2
+    assert dut.reg_inst.regs_q[9].get() == 0x87654321
+    illegal_addr = dut.reg_inst.regs_q[4].get().to_unsigned() + 4
+    assert dut.reg_inst.regs_q[10].get() == illegal_addr

@@ -1,3 +1,4 @@
 asm/*.bin
+asm/*.elf
 results.xml
 sim_build

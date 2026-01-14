@@ -1,3 +1,6 @@
+.text
+.global _start
+_start:
 csrrwi x1, mtvec, 0b10111
 csrrs  x2, mtvec, x0
 csrrwi x3, mscratch, 0b10101

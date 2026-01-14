@@ -36,7 +36,8 @@ end_loop:              ;\
 nop                    ;\
 j end_loop             ;\
 
-#define RVMODEL_BOOT
+#define RVMODEL_BOOT ;\
+  .option norelax    ;\
 
 //RV_COMPLIANCE_DATA_BEGIN
 #define RVMODEL_DATA_BEGIN \

@@ -29,7 +29,7 @@ class bus_resp_driver #(int AddrWidth, int DataWidth) extends uvm_driver #(bus_s
       // rdata out doesn't matter when writing
       vif.rdata <= req.data;
       if (req.wmask == '0) begin
-        `uvm_info(get_full_name(), $sformatf("rdata: %h", req.data), UVM_HIGH)
+        `uvm_info(get_full_name(), $sformatf("rdata: MEM[0x%h] 0x%h", req.addr, req.data), UVM_HIGH)
       end
       seq_item_port.item_done();
     end

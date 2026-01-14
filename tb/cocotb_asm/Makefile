@@ -9,6 +9,7 @@ endif
 ROOT_DIR := $(PWD)/../..
 
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/csr_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/pipeline_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/alu.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
@@ -32,7 +33,7 @@ RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
 
 %.elf: %.s
-	$(RISCV_TOOLCHAIN)as -march=rv64i_zicsr -mabi=lp64 $< -o $@
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

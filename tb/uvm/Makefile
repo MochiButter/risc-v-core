@@ -20,6 +20,7 @@ ASM_FILE ?= $(TB_DIR)/cocotb_asm/asm/loop.s
 
 VERILOG_DEFINE_FILES = ${UVM_ROOT}/src/uvm.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/core_pkg.sv
+VERILOG_DEFINE_FILES += $(RTL_DIR)/csr_pkg.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/pipeline_pkg.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/pipeline_reg.sv
 VERILOG_DEFINE_FILES += $(RTL_DIR)/alu.sv

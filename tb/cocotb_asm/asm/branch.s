@@ -1,3 +1,6 @@
+.text
+.global _start
+_start:
 li x3, 0
 li x4, 0
 li x5, 0

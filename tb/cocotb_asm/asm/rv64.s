@@ -1,3 +1,6 @@
+.text
+.global _start
+_start:
 li x1, 0x100000000
 li x2, 0xdeadbeef
 li x3, 0x200000001

@@ -44,8 +44,9 @@ class bus_resp_monitor #(int AddrWidth, int DataWidth) extends uvm_monitor;
       trans_collected.data = vif.wdata;
       trans_collected.wmask = vif.wmask;
 
-      `uvm_info(get_full_name(), $sformatf("MEM[0x%h] 0b%b 0x%h",
-        vif.addr, vif.wmask, vif.wdata), UVM_HIGH)
+      if (vif.wmask != '0) begin
+        `uvm_info(get_full_name(), $sformatf("wdata: MEM[0x%h] 0b%b 0x%h",vif.addr, vif.wmask, vif.wdata), UVM_HIGH)
+      end
       to_seqr_port.write(trans_collected);
       resp_queue.put(trans_collected);
     end

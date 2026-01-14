@@ -1,3 +1,6 @@
+.text
+.global _start
+_start:
 # set x1 to deadbeef
 li x1, 0xdeadbeef
 

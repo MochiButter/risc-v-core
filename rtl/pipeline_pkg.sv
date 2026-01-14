@@ -1,5 +1,6 @@
 package pipeline_pkg;
   import core_pkg::*;
+  import csr_pkg::*;
 
   /* Icarus says */
   /* sorry: Unpacked structs not supported. */
@@ -24,6 +25,9 @@ package pipeline_pkg;
     csr_op_e csr_op;
     logic [11:0] csr_addr;
     logic csr_use_imm;
+    logic expt_valid;
+    csr_mcause_e expt_cause;
+    logic [Xlen - 1:0] expt_value;
 
     jump_type_e jump_type;
 
@@ -48,6 +52,9 @@ package pipeline_pkg;
     csr_op_e csr_op;
     logic [11:0] csr_addr;
     logic csr_use_imm;
+    logic expt_valid;
+    csr_mcause_e expt_cause;
+    logic [Xlen - 1:0] expt_value;
 
     jump_type_e jump_type;
     logic branch_take;
@@ -65,5 +72,6 @@ package pipeline_pkg;
     logic [Xlen - 1:0] inst_pc;
     logic [Xlen - 1:0] alu_res;
     logic [4:0] rd_addr;
+    logic raise_trap;
   } memwb_reg_t;
 endpackage

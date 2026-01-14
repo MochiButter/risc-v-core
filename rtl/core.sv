@@ -81,19 +81,24 @@ module core
   /* The fifo is integrated inside of the fetch module */
 
   decode #() decode_inst (
-    .inst_i       (ifs_inst_data),
-    .imm_o        (idex_d.inst_imm),
-    .inst_type_o  (idex_d.inst_type),
-    .alu_op_o     (idex_d.alu_op),
-    .rs1_addr_o   (idex_d.rs1_addr),
-    .rs2_addr_o   (idex_d.rs2_addr),
-    .mem_type_o   (idex_d.mem_type),
-    .csr_op_o     (idex_d.csr_op),
-    .csr_imm_o    (idex_d.csr_use_imm),
-    .csr_addr_o   (idex_d.csr_addr),
-    .jump_type_o  (idex_d.jump_type),
-    .reg_wb_src_o (idex_d.reg_wb_src),
-    .rd_addr_o    (idex_d.rd_addr)
+    .inst_i        (ifs_inst_data),
+    .pc_i          (ifs_inst_pc),
+    .imm_o         (idex_d.inst_imm),
+    .inst_type_o   (idex_d.inst_type),
+    .jump_type_o   (idex_d.jump_type),
+    .reg_wb_src_o  (idex_d.reg_wb_src),
+
+    .alu_op_o      (idex_d.alu_op),
+    .mem_type_o    (idex_d.mem_type),
+    .rs1_addr_o    (idex_d.rs1_addr),
+    .rs2_addr_o    (idex_d.rs2_addr),
+    .rd_addr_o     (idex_d.rd_addr),
+    .csr_op_o      (idex_d.csr_op),
+    .csr_imm_o     (idex_d.csr_use_imm),
+    .csr_addr_o    (idex_d.csr_addr),
+    .expt_valid_o  (idex_d.expt_valid),
+    .expt_cause_o  (idex_d.expt_cause),
+    .expt_value_o  (idex_d.expt_value)
   );
 
   assign idex_d.inst_pc = ifs_inst_pc;
@@ -175,6 +180,10 @@ module core
   assign exmem_d.csr_addr    = idex_q.csr_addr;
   assign exmem_d.csr_use_imm = idex_q.csr_use_imm;
 
+  assign exmem_d.expt_valid  = idex_q.expt_valid;
+  assign exmem_d.expt_cause  = idex_q.expt_cause;
+  assign exmem_d.expt_value  = idex_q.expt_value;
+
   assign exmem_d.jump_type   = idex_q.jump_type;
 
   /* To Wb */
@@ -246,6 +255,9 @@ module core
     .rst_ni        (rst_ni),
     .valid_i       (exmem_rd_valid),
     .csr_op_i      (exmem_q.csr_op),
+    .expt_valid_i  (exmem_q.expt_valid),
+    .expt_cause_i  (exmem_q.expt_cause),
+    .expt_value_i  (exmem_q.expt_value),
     .rs1_data_i    (mems_csr_rs1_data),
     .csr_addr_i    (exmem_q.csr_addr),
     .rd_data_o     (memwb_d.csr_rd_data),
@@ -301,6 +313,7 @@ module core
   assign memwb_d.inst_pc    = exmem_q.inst_pc;
   assign memwb_d.alu_res    = exmem_q.alu_res;
   assign memwb_d.rd_addr    = exmem_q.rd_addr;
+  assign memwb_d.raise_trap = mems_csr_raise_trap;
 
   // wb is always ready to accept rd_data
   pipeline_reg #(.Width($bits(memwb_reg_t))) pipeline_memwb (
@@ -338,7 +351,7 @@ module core
     endcase
   end
 
-  assign wbs_reg_wb_en = (memwb_q.reg_wb_src != WbNone) && memwb_rd_valid;
+  assign wbs_reg_wb_en = (memwb_q.reg_wb_src != WbNone) && memwb_rd_valid && !memwb_q.raise_trap;
 
   register #(.RegWidth(Xlen)) reg_inst (
     .clk_i         (clk_i),

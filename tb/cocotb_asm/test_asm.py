@@ -209,8 +209,12 @@ async def test_csr(dut):
     assert dut.reg_inst.regs_q[2].get() == 0x14
     assert dut.reg_inst.regs_q[3].get() == 0x15
     assert dut.reg_inst.regs_q[4].get() == 0xb # Environment call from M-mode
-    assert dut.reg_inst.regs_q[5].get() == 0x20
-    assert dut.reg_inst.regs_q[6].get() == 0x24
+    ecall_addr = dut.reg_inst.regs_q[5].get().to_unsigned()
+    ecall_label = dut.reg_inst.regs_q[7].get().to_unsigned()
+    assert ecall_addr == ecall_label
+    misa = dut.reg_inst.regs_q[8].get()
+    assert misa[63:62] == 2
+    assert misa[8]
 
 @cocotb.test()
 async def test_rv64(dut):
@@ -228,5 +232,14 @@ async def test_trap_illegal(dut):
     await run_program(dut, "trap_illegal.bin")
     assert dut.reg_inst.regs_q[8].get() == 0x2
     assert dut.reg_inst.regs_q[9].get() == 0x87654321
-    illegal_addr = dut.reg_inst.regs_q[4].get().to_unsigned() + 4
-    assert dut.reg_inst.regs_q[10].get() == illegal_addr
+    illegal_addr = dut.reg_inst.regs_q[4].get().to_unsigned()
+    assert dut.reg_inst.regs_q[10].get() == illegal_addr + 4
+
+@cocotb.test()
+async def test_trap_illegal(dut):
+    def check_mem(mem):
+        assert mem[128] == 0
+        assert mem[129] == 4
+        assert mem[130] == 6
+    await run_program(dut, "misalign.bin", check_mem)
+    assert dut.reg_inst.regs_q[31].get() == 2

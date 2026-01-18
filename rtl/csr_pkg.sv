@@ -1,4 +1,5 @@
 package csr_pkg;
+  import core_pkg::Xlen;
 
   typedef enum logic[11:0] {
     CSRmhartid   = 12'hf14,
@@ -14,7 +15,7 @@ package csr_pkg;
     CSRmip       = 12'h344
   } csr_addrs_e;
 
-  typedef enum logic [63:0] {
+  typedef enum logic [Xlen - 1:0] {
     SSoftInt  = {1'b1, 63'd1},
     MSoftInt  = {1'b1, 63'd3},
     STimerInt = {1'b1, 63'd5},
@@ -40,5 +41,41 @@ package csr_pkg;
     SoftwareCheck      = 18,
     HardwareError      = 19
   } csr_mcause_e;
+
+  typedef struct packed {
+    logic sd;
+    logic [62:43] wpri0;
+    logic mdt;
+    logic mpelp;
+    logic wpri1;
+    logic mpv;
+    logic gva;
+    logic mbe;
+    logic sbe;
+    logic [1:0] sxl;
+    logic [1:0] uxl;
+    logic [31:25] wpri2;
+    logic sdt;
+    logic spelp;
+    logic tsr;
+    logic tw;
+    logic tvm;
+    logic mxr;
+    logic sum;
+    logic mprv;
+    logic [1:0] xs;
+    logic [1:0] fs;
+    logic [1:0] mpp;
+    logic [1:0] vs;
+    logic spp;
+    logic mpie;
+    logic ube;
+    logic spie;
+    logic wpri3;
+    logic mie;
+    logic wpri4;
+    logic sie;
+    logic wpri5;
+  } csr_mstatus_t;
 
 endpackage

@@ -1,5 +1,6 @@
 module core
   import core_pkg::*;
+  import csr_pkg::*;
   import pipeline_pkg::*;
   (input logic clk_i
   ,input logic rst_ni
@@ -203,7 +204,8 @@ module core
 
   /* ===== [EX -> MEM] ===== */
 
-  logic mems_busy;
+  logic mems_busy, mems_lsu_misalign;
+  logic [Xlen - 1:0] mems_load_data;
 
   /* Frowarding control */
   logic mems_wbs_rs1_fwd, mems_wbs_rs2_fwd;
@@ -223,30 +225,67 @@ module core
   logic mems_csr_raise_trap;
 
   /* Compute jump target */
-  logic [Xlen - 1:0] mems_load_data;
-  logic [Xlen - 1:0] mems_jalr_slice;
-
-  assign mems_jalr_slice = {exmem_q.alu_res[Xlen - 1:1], 1'b0};
-  assign mems_control_hazard = exmem_rd_valid && (
-    (exmem_q.jump_type == JmpJal || exmem_q.jump_type == JmpJalr) ||
-    (exmem_q.jump_type == JmpBr && exmem_q.branch_take) ||
-    mems_csr_raise_trap
-  );
-
-  jump_type_e mems_jump_type;
-  assign mems_jump_type = exmem_q.jump_type;
-  logic [Xlen - 1:0] mems_inst_pc, mems_inst_imm;
+  logic [Xlen - 1:0] mems_jump_target, mems_inst_pc, mems_inst_imm;
+  logic mems_jump, mems_inst_misalign;
   assign mems_inst_pc = exmem_q.inst_pc;
   assign mems_inst_imm = exmem_q.inst_imm;
 
+  assign mems_jump = exmem_rd_valid && (
+    (exmem_q.jump_type == JmpJal || exmem_q.jump_type == JmpJalr) ||
+    (exmem_q.jump_type == JmpBr && exmem_q.branch_take));
+  assign mems_control_hazard = mems_jump || mems_csr_raise_trap;
+
+  assign mems_jump_target = (exmem_q.jump_type == JmpJalr) ?
+    {exmem_q.alu_res[Xlen - 1:1], 1'b0} : (mems_inst_pc + mems_inst_imm);
+  assign mems_pc_target = mems_csr_raise_trap ?
+    mems_csr_trap_vector : mems_jump_target;
+  assign mems_inst_misalign = mems_jump && mems_jump_target[1:0] != 2'b00;
+
+  /* LSU misaligned access */
+  logic [2:0] mems_lsu_bits_dword;
+  logic [1:0] mems_lsu_bits_word;
+  logic mems_lsu_bits_half;
+  logic [1:0] mems_lsuop;
+  assign mems_lsu_bits_dword = exmem_q.alu_res[2:0];
+  assign mems_lsu_bits_word = exmem_q.alu_res[1:0];
+  assign mems_lsu_bits_half = exmem_q.alu_res[0];
+  assign mems_lsuop = exmem_q.funct3[1:0];
   always_comb begin
-    mems_pc_target = 'x;
-    if (mems_control_hazard && mems_jump_type == JmpJalr) begin
-      mems_pc_target = mems_jalr_slice;
-    end else if (mems_control_hazard && mems_csr_raise_trap) begin
-      mems_pc_target = mems_csr_trap_vector;
-    end else if (mems_control_hazard) begin
-      mems_pc_target = mems_inst_pc + mems_inst_imm;
+    case (mems_lsuop)
+      1: mems_lsu_misalign = mems_lsu_bits_half  != 1'h0;
+      2: mems_lsu_misalign = mems_lsu_bits_word  != 2'h0;
+      3: mems_lsu_misalign = mems_lsu_bits_dword != 3'h0;
+      default: mems_lsu_misalign = '0;
+    endcase
+  end
+
+  logic [Xlen - 1:0] mems_csr_rd_data, mems_alu_res;
+  reg_wb_src_e mems_reg_wb_src;
+  assign mems_csr_rd_data = memwb_d.csr_rd_data;
+  assign mems_alu_res     = exmem_q.alu_res;
+  assign mems_reg_wb_src  = exmem_q.reg_wb_src;
+
+  logic [Xlen - 1:0] mems_expt_cause, mems_expt_value, exmem_expt_cause, exmem_expt_value;
+  logic exmem_expt_valid, mems_expt_valid;
+  mem_type_e mems_mem_type;
+  assign mems_mem_type = exmem_q.mem_type;
+  assign exmem_expt_cause = exmem_q.expt_cause;
+  assign exmem_expt_value = exmem_q.expt_value;
+  assign exmem_expt_valid = exmem_q.expt_valid;
+  always_comb begin
+    mems_expt_valid = exmem_expt_valid;
+    mems_expt_cause = exmem_expt_cause;
+    mems_expt_value = exmem_expt_value;
+    if (!exmem_rd_valid || !exmem_expt_valid) begin
+      if (mems_inst_misalign) begin
+        mems_expt_valid = 1'b1;
+        mems_expt_cause = InstAddrMisaligned;
+        mems_expt_value = mems_pc_target;
+      end else if (mems_lsu_misalign && mems_mem_type != MemNone) begin
+        mems_expt_valid = 1'b1;
+        mems_expt_cause = (mems_mem_type == MemLoad) ? LdAddrMisaligned : StAddrMisaligned;
+        mems_expt_value = mems_alu_res;
+      end
     end
   end
 
@@ -255,9 +294,10 @@ module core
     .rst_ni        (rst_ni),
     .valid_i       (exmem_rd_valid),
     .csr_op_i      (exmem_q.csr_op),
-    .expt_valid_i  (exmem_q.expt_valid),
-    .expt_cause_i  (exmem_q.expt_cause),
-    .expt_value_i  (exmem_q.expt_value),
+    .expt_valid_i  (mems_expt_valid),
+    .expt_cause_i  (mems_expt_cause),
+    .expt_value_i  (mems_expt_value),
+
     .rs1_data_i    (mems_csr_rs1_data),
     .csr_addr_i    (exmem_q.csr_addr),
     .rd_data_o     (memwb_d.csr_rd_data),
@@ -270,7 +310,7 @@ module core
     .clk_i        (clk_i),
     .rst_ni       (rst_ni),
 
-    .valid_inst_i (exmem_rd_valid),
+    .valid_inst_i (exmem_rd_valid && !mems_lsu_misalign),
     .mem_type_i   (exmem_q.mem_type),
     .addr_i       (exmem_q.alu_res),
     .wdata_i      (mems_rs2_fwd),
@@ -286,12 +326,6 @@ module core
     .mem_rdata_i  (datamem_rdata_i),
     .mem_rvalid_i (datamem_rvalid_i)
   );
-
-  logic [Xlen - 1:0] mems_csr_rd_data, mems_alu_res;
-  reg_wb_src_e mems_reg_wb_src;
-  assign mems_csr_rd_data = memwb_d.csr_rd_data;
-  assign mems_alu_res     = exmem_q.alu_res;
-  assign mems_reg_wb_src  = exmem_q.reg_wb_src;
 
   always_comb begin
     case (mems_reg_wb_src)

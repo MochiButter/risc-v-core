@@ -21,6 +21,10 @@ module csr
   ,output logic [Xlen - 1:0] trap_vector_o
   );
 
+  localparam logic [Xlen - 1:0] Misa =
+    (Xlen'(1) << 8) |         // I - RV32I/64I base ISA
+    (Xlen'(2) << (Xlen - 2)); // MXLEN - 2 for 64 bits
+
   logic [Xlen - 1:0] csr_wdata;
 
   logic [Xlen - 1:0] mtvec_d, mtvec_q;
@@ -51,6 +55,7 @@ module csr
   always_comb begin
     case (csr_addr_i)
       CSRmhartid:  rd_data_o = MHartId;
+      CSRmisa:     rd_data_o = Misa;
       CSRmtvec:    rd_data_o = mtvec_q;
       CSRmscratch: rd_data_o = mscratch_q;
       CSRmepc:     rd_data_o = mepc_q;
@@ -71,7 +76,7 @@ module csr
     mepc_d = mepc_q;
     mcause_d = mcause_q;
     mtval_d = mtval_q;
-    if (valid_i && raise_expt && raise_trap_o) begin
+    if (valid_i && raise_expt) begin
       mepc_d   = mepc_mask;
       mcause_d = expt_cause_i;
       mtval_d  = expt_value_i;

@@ -204,6 +204,15 @@ async def test_loop(dut):
     assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0xdeadbeef
 
 @cocotb.test()
+async def test_forward(dut):
+    def check_mem(mem):
+        assert mem[6] == 0x42
+    await run_program(dut, "forward.bin", check_mem)
+    #assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0xeef000
+    assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x42
+    # assert dut.reg_inst.regs_q[3].get().to_unsigned()  == 0x42
+
+@cocotb.test()
 async def test_csr(dut):
     await run_program(dut, "csr.bin")
     assert dut.reg_inst.regs_q[2].get() == 0x14
@@ -236,7 +245,7 @@ async def test_trap_illegal(dut):
     assert dut.reg_inst.regs_q[10].get() == illegal_addr + 4
 
 @cocotb.test()
-async def test_trap_illegal(dut):
+async def test_misalign(dut):
     def check_mem(mem):
         assert mem[128] == 0
         assert mem[129] == 4

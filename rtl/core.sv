@@ -148,8 +148,8 @@ module core
     case (alu_inst_type)
       Rtype, Btype: begin alu_a = exs_rs1_fwd; alu_b = exs_rs2_fwd; end
       Itype, Stype: begin alu_a = exs_rs1_fwd; alu_b = alu_imm;     end
-      Utype:        begin alu_a = alu_pc;       alu_b = alu_imm;    end
-      default:      begin alu_a = 'x;           alu_b = 'x;         end
+      Utype:        begin alu_a = alu_pc;      alu_b = alu_imm;    end
+      default:      begin alu_a = 'x;          alu_b = 'x;         end
     endcase
   end
 
@@ -171,8 +171,8 @@ module core
   /* To Mem */
   assign exmem_d.rs1_addr    = idex_q.rs1_addr;
   assign exmem_d.rs2_addr    = idex_q.rs2_addr;
-  assign exmem_d.rs1_data    = exs_rs1_data;
-  assign exmem_d.rs2_data    = exs_rs2_data;
+  assign exmem_d.rs1_data    = exs_rs1_fwd;
+  assign exmem_d.rs2_data    = exs_rs2_fwd;
 
   assign exmem_d.mem_type    = idex_q.mem_type;
   assign exmem_d.funct3      = idex_q.funct3;

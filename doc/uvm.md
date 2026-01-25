@@ -48,7 +48,7 @@ will work (maybe more).
 
 The modified uvm library files are also needed, which can be found
 [here](https://github.com/antmicro/uvm-verilator/tree/uvm-1.2-current-patches).
-It is set as a submodule in the third-party directory, which can be downloaded
+It is set as a submodule in the `tb/uvm` directory, which can be downloaded
 with `git submodule update --init --recursive`
 
 ## Acknowledgements

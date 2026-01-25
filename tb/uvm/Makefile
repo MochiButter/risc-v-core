@@ -14,7 +14,7 @@ endif
 
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 
-UVM_ROOT ?= $(ROOT_DIR)/third_party/uvm-1.2
+UVM_ROOT ?= uvm-1.2
 UVM_TEST ?= core_basic_test
 ASM_FILE ?= $(TB_DIR)/cocotb_asm/asm/loop.s
 

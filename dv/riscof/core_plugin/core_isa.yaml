@@ -5,3 +5,8 @@ hart0:
   User_Spec_Version: '2.3'
   hw_data_misaligned_support: False
   supported_xlen: [64]
+  PMP:
+    implemented: False
+    pmp-grain: 0
+    pmp-count: 16
+    pmp-writable: 12

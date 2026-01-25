@@ -45,15 +45,14 @@ Prerequisites:
 
 - riscof
 - riscv-arch-test
-- sail-riscv == 0.8
+- sail-riscv >= 0.8
 - RISC-V GNU toolchain (assumes rv32i)
 - The [uvm testbench](#uvm-testbench)
 
 The test already assumes riscof and sail-riscv is installed and in the `PATH`,
 and that the environment variable `ARCH_TEST_DIR` points to the cloned
-riscv-arch-test repository.
-Sail must be version 0.8, otherwise the config json format will not be
-compatible with the riscof plugin.
+riscv-arch-test repository (by default in `dv/riscof`).
+Sail can be version 0.8 / 0.9.
 
 To install riscof to run without any additonal config:
 ```

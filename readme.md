@@ -1,6 +1,6 @@
 # risc v core
 
-A 5-stage RISC-V core that implements the RV64I_Zicsr instruction set.
+A 5-stage RISC-V core that implements the RV64I_Zicsr_Zifencei instruction set.
 
 ## Verification
 

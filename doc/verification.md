@@ -35,8 +35,7 @@ make verilator_gls.vcd
 
 ## uvm testbench
 The directory `tb/uvm` contains the uvm testbench structure.
-It runs compiled files similar to cocotb, but allows for loading different data
-for the instruction and data memory.
+The uvm testbenches can load hex files similar to the cocotb testbench.
 It's main usage for now is for [riscof](#riscv-arch-test).
 For usage refer to the uvm [document](uvm.md)
 

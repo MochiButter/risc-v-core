@@ -8,6 +8,8 @@ package core_test_pkg;
   `include "uvm_macros.svh"
   `include "dv_macros.svh"
 
+  `include "mem_model.sv"
+
   `include "core_base_test.sv"
   `include "core_test_lib.sv"
 

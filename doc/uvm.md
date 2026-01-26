@@ -22,13 +22,18 @@ transaction and creates an item with the address, data (if any) and the
 write mask.
 The monitor writes the item to its port connected to the sequencer.
 The sequence gets the item from the p_sequencer port, then reads/writes to the
-array at that address and creates a new item based on the memory action.
+memory at that address and creates a new item based on the memory action.
 The sequence then starts and finishes the item to write it to the driver.
 The driver gets the item and drives the rvalid signal high until the next clock
 cycle.
 The rvalid signal is set low until the next item comes.
 When the rvalid signal goes high after an item is passed to the sequencer, the
 monitor passes the completed transaction to the test class for checking.
+
+The test class contains the system memory model and the sequences for the
+instruction and data memory bus agents.
+Both sequences hold a reference to the memory model in the test class.
+Requests made on each interface will read from and write to that single memory.
 
 The current termination condition is hardcoded to be when the core writes
 `0xdeadbeef` to `0x000000038`.

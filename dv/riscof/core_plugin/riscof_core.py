@@ -53,7 +53,7 @@ class core(pluginTemplate):
          -I ' + archtest_env + ' {2} -o {3} {4}'
 
        self.makehex_cmd = toolchain + 'objcopy -O verilog \
-               --verilog-data-width={1} {2} {3} {4}'
+               --verilog-data-width={0} {1} {2}'
 
     def build(self, isa_yaml, platform_yaml):
       ispec = utils.load_yaml(isa_yaml)['hart0']
@@ -78,16 +78,15 @@ class core(pluginTemplate):
 
           compile_macros= ' -D' + " -D".join(testentry['macros'])
           cmd = self.compile_cmd.format(testentry['isa'].lower(), self.xlen, test, elf, compile_macros)
-          makehex_text = self.makehex_cmd.format(self.xlen, int(int(self.xlen) / 8), "--only-section=.text*", elf, "my_text.hex")
-          makehex_data = self.makehex_cmd.format(self.xlen, int(int(self.xlen) / 8), "--only-section=.data* --only-section=.bss", elf, "my_data.hex")
+          makehex = self.makehex_cmd.format(int(int(self.xlen) / 8), elf, "my.hex")
 
           if self.target_run:
-            simcmd = self.dut_exe + ' +UVM_TESTNAME=core_test_riscof +RISCOF_SIG_PATH={0} +TEXT_HEX=my_text.hex +DATA_HEX=my_data.hex'.format(sig_file)
+            simcmd = self.dut_exe + ' +UVM_TESTNAME=core_test_riscof +RISCOF_SIG_PATH={0} +PROG_HEX=my.hex'.format(sig_file)
             simcmd += " | tee {0}".format(log_file)
           else:
             simcmd = 'echo "NO RUN"'
 
-          execute = 'cd {}; {}; {}; {}; {};'.format(testentry['work_dir'], cmd, makehex_text, makehex_data, simcmd)
+          execute = 'cd {}; {}; {}; {};'.format(testentry['work_dir'], cmd, makehex, simcmd)
 
           make.add_target(execute)
 

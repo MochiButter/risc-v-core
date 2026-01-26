@@ -252,3 +252,8 @@ async def test_misalign(dut):
         assert mem[130] == 6
     await run_program(dut, "misalign.bin", check_mem)
     assert dut.reg_inst.regs_q[31].get() == 2
+
+@cocotb.test()
+async def test_fencei(dut):
+    await run_program(dut, "fencei.bin")
+    assert dut.reg_inst.regs_q[1].get() == 0x42

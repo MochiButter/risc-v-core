@@ -5,6 +5,8 @@ package bus_resp_agent_pkg;
   `include "uvm_macros.svh"
   `include "dv_macros.svh"
 
+  `include "mem_model.sv"
+
   `include "bus_seq_item.sv"
   `include "bus_resp_sequencer.sv"
   `include "bus_resp_seq_lib.sv"

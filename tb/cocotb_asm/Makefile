@@ -33,7 +33,7 @@ RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
 
 %.elf: %.s
-	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

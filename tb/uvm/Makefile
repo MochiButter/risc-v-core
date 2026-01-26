@@ -75,17 +75,14 @@ $(SIM_DIR)/$(SIM_NAME): $(SIM_DIR)/$(SIM_NAME).mk
 	$(MAKE) -j${NPROC} -C $(SIM_DIR) $(BUILD_ARGS) -f $(SIM_NAME).mk
 
 $(SIM_DIR)/program.elf: $(ASM_FILE)
-	$(RISCV_TOOLCHAIN)as -march=rv64i -mabi=lp64 $< -o $@
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
 
-$(SIM_DIR)/program_text.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.text* $< $@
+$(SIM_DIR)/program.hex: $(SIM_DIR)/program.elf
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 $< $@
 
-$(SIM_DIR)/program_data.hex: $(SIM_DIR)/program.elf
-	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 --only-section=.data* --only-section=.bss* $< $@
-
-simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME) $(SIM_DIR)/program_text.hex $(SIM_DIR)/program_data.hex
+simulate: $(SIM_DIR)/$(SIM_NAME).mk $(SIM_DIR)/$(SIM_NAME) $(SIM_DIR)/program.hex
 	$(SIM_DIR)/$(SIM_NAME) +UVM_TESTNAME=$(UVM_TEST) +UVM_VERBOSITY=UVM_HIGH \
-		+TEXT_HEX=$(SIM_DIR)/program_text.hex +DATA_HEX=$(SIM_DIR)/program_data.hex \
+		+PROG_HEX=$(SIM_DIR)/program.hex \
 		| tee $(TEMPFILE)
 	@grep "^UVM_ERROR\\s*:\\s*0$$" $(TEMPFILE) -q
 	@grep "^UVM_FATAL\\s*:\\s*0$$" $(TEMPFILE) -q

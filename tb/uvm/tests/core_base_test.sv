@@ -3,12 +3,12 @@ class core_base_test #(int AddrWidth, int DataWidth) extends uvm_test;
   core_env #(AddrWidth, DataWidth) env;
   bus_resp_seq_base #(AddrWidth, DataWidth) inst_seq;
   bus_resp_seq_base #(AddrWidth, DataWidth) data_seq;
+  mem_model #(AddrWidth, DataWidth) system_mem;
 
   uvm_tlm_analysis_fifo #(bus_seq_item #(AddrWidth, DataWidth)) watch_datamem_port;
   uvm_tlm_analysis_fifo #(bus_seq_item #(AddrWidth, DataWidth)) watch_instmem_port;
 
-  string text_hex_path;
-  string data_hex_path;
+  string prog_hex_path;
 
   `uvm_component_param_utils(core_base_test #(AddrWidth, DataWidth))
   `uvm_comp_new
@@ -20,11 +20,14 @@ class core_base_test #(int AddrWidth, int DataWidth) extends uvm_test;
     env = core_env #(AddrWidth, DataWidth)::type_id::create("env", this);
     inst_seq = bus_resp_seq_base #(AddrWidth, DataWidth)::type_id::create("inst_seq", this);
     data_seq = bus_resp_seq_base #(AddrWidth, DataWidth)::type_id::create("data_seq", this);
+    system_mem = mem_model #(AddrWidth, DataWidth)::type_id::create("system_mem", this);
   endfunction : build_phase
 
   function void connect_phase (uvm_phase phase);
     env.data_if_resp_agent.monitor.item_collected_port.connect(this.watch_datamem_port.analysis_export);
     env.inst_if_resp_agent.monitor.item_collected_port.connect(this.watch_instmem_port.analysis_export);
+    inst_seq.mem = system_mem;
+    data_seq.mem = system_mem;
   endfunction : connect_phase
 
   virtual task run_phase (uvm_phase phase);
@@ -36,13 +39,8 @@ class core_base_test #(int AddrWidth, int DataWidth) extends uvm_test;
   endtask
 
   task init_mem ();
-    if ($value$plusargs("TEXT_HEX=%s", text_hex_path)) begin
-      inst_seq.load_program(text_hex_path);
-    end else begin
-      $error("Need test hex");
-    end
-    if ($value$plusargs("DATA_HEX=%s", data_hex_path)) begin
-      data_seq.load_program(data_hex_path);
+    if ($value$plusargs("PROG_HEX=%s", prog_hex_path)) begin
+      system_mem.load_program(prog_hex_path);
     end else begin
       $error("Need test hex");
     end

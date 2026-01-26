@@ -31,6 +31,8 @@ package pipeline_pkg;
 
     jump_type_e jump_type;
 
+    logic is_fencei;
+
     /* To Wb */
     reg_wb_src_e reg_wb_src;
     logic [4:0] rd_addr;
@@ -58,6 +60,8 @@ package pipeline_pkg;
 
     jump_type_e jump_type;
     logic branch_take;
+
+    logic is_fencei;
 
     /* To wb */
     reg_wb_src_e reg_wb_src;

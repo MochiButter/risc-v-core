@@ -88,7 +88,6 @@ module core
     .inst_type_o   (idex_d.inst_type),
     .jump_type_o   (idex_d.jump_type),
     .reg_wb_src_o  (idex_d.reg_wb_src),
-
     .alu_op_o      (idex_d.alu_op),
     .mem_type_o    (idex_d.mem_type),
     .rs1_addr_o    (idex_d.rs1_addr),
@@ -99,7 +98,8 @@ module core
     .csr_addr_o    (idex_d.csr_addr),
     .expt_valid_o  (idex_d.expt_valid),
     .expt_cause_o  (idex_d.expt_cause),
-    .expt_value_o  (idex_d.expt_value)
+    .expt_value_o  (idex_d.expt_value),
+    .is_fencei_o   (idex_d.is_fencei)
   );
 
   assign idex_d.inst_pc = ifs_inst_pc;
@@ -187,6 +187,8 @@ module core
 
   assign exmem_d.jump_type   = idex_q.jump_type;
 
+  assign exmem_d.is_fencei   = idex_q.is_fencei;
+
   /* To Wb */
   assign exmem_d.reg_wb_src  = idex_q.reg_wb_src;
   assign exmem_d.rd_addr     = idex_q.rd_addr;
@@ -233,12 +235,12 @@ module core
   assign mems_jump = exmem_rd_valid && (
     (exmem_q.jump_type == JmpJal || exmem_q.jump_type == JmpJalr) ||
     (exmem_q.jump_type == JmpBr && exmem_q.branch_take));
-  assign mems_control_hazard = mems_jump || mems_csr_raise_trap;
+  assign mems_control_hazard = mems_jump || mems_csr_raise_trap || exmem_q.is_fencei;
 
   assign mems_jump_target = (exmem_q.jump_type == JmpJalr) ?
-    {exmem_q.alu_res[Xlen - 1:1], 1'b0} : (mems_inst_pc + mems_inst_imm);
-  assign mems_pc_target = mems_csr_raise_trap ?
-    mems_csr_trap_vector : mems_jump_target;
+    {exmem_q.alu_res[Xlen - 1:1], 1'b0} :
+    (mems_inst_pc + (exmem_q.is_fencei ? 4 : mems_inst_imm));
+  assign mems_pc_target = mems_csr_raise_trap ? mems_csr_trap_vector : mems_jump_target;
   assign mems_inst_misalign = mems_jump && mems_jump_target[1:0] != 2'b00;
 
   /* LSU misaligned access */

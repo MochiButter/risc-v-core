@@ -22,6 +22,8 @@ module decode
   ,output logic              expt_valid_o
   ,output csr_mcause_e       expt_cause_o
   ,output logic [Xlen - 1:0] expt_value_o
+
+  ,output logic              is_fencei_o
   );
 
   typedef enum logic [6:0] {
@@ -37,7 +39,7 @@ module decode
     OpLui    = 7'b0110111,
     OpAuipc  = 7'b0010111,
     OpSys    = 7'b1110011,
-    OpFence  = 7'b0001111
+    OpMisc   = 7'b0001111
   } opcode_e;
 
   logic illegal_inst, ex_ecall, ex_ebreak;
@@ -70,9 +72,6 @@ module decode
   assign imm_j = {{Xlen - 21{inst_i[31]}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
   assign imm_sys = {{Xlen - 5{1'b0}}, inst_i[19:15]};
 
-  logic [Xlen - 1:0] faulting_inst;
-  assign faulting_inst = {{Xlen - Ilen{1'b0}}, inst_i};
-
   always_comb begin
     imm_o = 'x;
     inst_type_o = Rtype;
@@ -87,6 +86,7 @@ module decode
     illegal_inst = 1'b0;
     ex_ecall = 1'b0;
     ex_ebreak = 1'b0;
+    is_fencei_o = 1'b0;
 
     case (opcode)
       OpALU: begin
@@ -265,14 +265,24 @@ module decode
         reg_wb_src_o = WbCsr;
         imm_o = imm_sys;
       end
-      OpFence: ;
+      OpMisc: begin
+        case (funct3)
+          3'h0: illegal_inst = (rs1_bits != '0 || rd_addr_o != '0);
+          3'h1: begin
+            is_fencei_o = 1'b1;
+            illegal_inst = (rs1_bits != '0 || rs2_bits != '0 ||
+              rd_addr_o != '0 || funct7 != '0);
+          end
+          default: illegal_inst = 1'b1;
+        endcase
+      end
       default: illegal_inst = 1'b1;
     endcase
 
     if (illegal_inst) begin
       expt_valid_o = 1'b1;
       expt_cause_o = IllegalInst;
-      expt_value_o = faulting_inst;
+      expt_value_o = {{Xlen - Ilen{1'b0}}, inst_i};;
     end else if (ex_ecall) begin
       expt_valid_o = 1'b1;
       expt_cause_o = EcallM;

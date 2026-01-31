@@ -35,9 +35,9 @@ module csr
   logic [Xlen - 1:0] mscratch_d, mscratch_q;
 
   logic [Xlen - 1:0] mepc_d, mepc_q;
-  logic [Xlen - 1:0] mepc_mask;
-  localparam PcClearBits = 1;
-  assign mepc_mask = pc_i & {{Xlen - PcClearBits{1'b1}}, '0};
+  localparam PcClearBits = Ilen / 16;
+  localparam logic [Xlen - 1:0] MepcMask =
+    {{Xlen - PcClearBits{1'b1}}, PcClearBits'(0)};
 
   logic [Xlen - 1:0] mcause_d, mcause_q;
   logic [Xlen - 1:0] mtval_d, mtval_q;
@@ -77,14 +77,14 @@ module csr
     mcause_d = mcause_q;
     mtval_d = mtval_q;
     if (valid_i && raise_expt) begin
-      mepc_d   = mepc_mask;
+      mepc_d   = pc_i;
       mcause_d = expt_cause_i;
       mtval_d  = expt_value_i;
     end else if (valid_i && csr_wsc) begin
       case (csr_addr_i)
         CSRmtvec:    mtvec_d    = mtvec_mask;
         CSRmscratch: mscratch_d = csr_wdata;
-        CSRmepc:     mepc_d     = csr_wdata;
+        CSRmepc:     mepc_d     = csr_wdata & MepcMask;
         CSRmcause:   mcause_d   = csr_wdata;
         CSRmtval:    mtval_d    = csr_wdata;
         default: ;

@@ -166,17 +166,18 @@ module decode
       end
       OpLoad: begin
         illegal_inst = (funct3 == 3'h7);
-        inst_type_o = Itype;
+        mem_type_o = mem_type_e'((funct3 == 3'h7) ? MemNone : MemLoad);
         reg_wb_src_o = WbLsu;
+        inst_type_o = Itype;
         imm_o = imm_i;
-        mem_type_o = MemLoad;
       end
       OpStore: begin
-        illegal_inst = (funct3 == 3'h4) || (funct3 == 3'h5) ||
-          (funct3 == 3'h6) || (funct3 == 3'h7);
+        case (funct3)
+          3'h0, 3'h1, 3'h2, 3'h3: mem_type_o = MemStore;
+          default: illegal_inst = 1'b1;
+        endcase
         inst_type_o = Stype;
         imm_o = imm_s;
-        mem_type_o = MemStore;
       end
       OpBranch: begin
         case (funct3)
@@ -189,8 +190,11 @@ module decode
           default: illegal_inst = 1'b1;
         endcase
 
+        if (!illegal_inst) begin
+          jump_type_o = JmpBr;
+        end
+
         inst_type_o = Btype;
-        jump_type_o = JmpBr;
         imm_o = imm_b;
       end
       OpJal: begin
@@ -201,9 +205,9 @@ module decode
       end
       OpJalr: begin
         illegal_inst = (funct3 != 3'h0);
-        inst_type_o = Itype;
-        jump_type_o = JmpJalr;
+        jump_type_o = jump_type_e'((funct3 != 3'h0) ? JmpNone : JmpJalr);
         reg_wb_src_o = WbJmp;
+        inst_type_o = Itype;
         imm_o = imm_i;
       end
       OpLui: begin
@@ -236,7 +240,7 @@ module decode
               end
               12'h302: csr_op_o = OpMret;
               12'h002, 12'h102, 12'h202, 12'h7b2,
-                12'h104, 12'h105: ; // unimplemented
+                12'h104, 12'h105: illegal_inst = 1'b1; // unimplemented
               default: illegal_inst = 1'b1;
             endcase
           end
@@ -269,9 +273,12 @@ module decode
         case (funct3)
           3'h0: illegal_inst = (rs1_bits != '0 || rd_addr_o != '0);
           3'h1: begin
-            is_fencei_o = 1'b1;
-            illegal_inst = (rs1_bits != '0 || rs2_bits != '0 ||
-              rd_addr_o != '0 || funct7 != '0);
+            if (rs1_bits != '0 || rs2_bits != '0 ||
+              rd_addr_o != '0 || funct7 != '0) begin
+              illegal_inst = 1'b1;
+            end else begin
+              is_fencei_o = 1'b1;
+            end
           end
           default: illegal_inst = 1'b1;
         endcase

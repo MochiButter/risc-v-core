@@ -18,71 +18,66 @@ module fetch import core_pkg::*;
   );
 
   logic [(Xlen + Ilen) - 1:0] fifo_wr_data;
-  logic [Xlen - 1:0] pc_next_d, pc_next_q, fetch_addr_d, fetch_addr_q;
-  logic fifo_rst, fifo_wr_valid, fifo_wr_ready;
-
-  typedef enum logic [1:0] {Idle, Fetching, Hazard} fetch_state_e;
-
-  fetch_state_e fetch_state_d, fetch_state_q;
+  logic [Xlen - 1:0] req_addr_d, req_addr_q, resp_addr_d, resp_addr_q,
+    next_addr, inc_next_addr;
+  logic fifo_rst, fifo_wr_valid, fifo_wr_ready,
+    wait_resp_d, wait_resp_q, req_valid;
 
   assign mem_valid_o = fifo_wr_ready;
-  assign mem_addr_o  = fetch_addr_d;
-
+  assign mem_addr_o = control_hazard_i ? pc_target_i : req_addr_q;
   assign fifo_rst = !rst_ni || control_hazard_i;
-  assign fifo_wr_valid = mem_rvalid_i && fetch_state_q != Hazard;
-
-  assign pc_next_d = fetch_addr_d + 'h4;
+  assign fifo_wr_valid = (mem_rvalid_i && wait_resp_q);
 
   always_comb begin
-    if (control_hazard_i) begin
-      fetch_addr_d = pc_target_i;
-    end else begin
-      fetch_addr_d = pc_next_q;
-    end
-  end
+    wait_resp_d = wait_resp_q;
+    req_addr_d = req_addr_q;
+    resp_addr_d = resp_addr_q;
 
-  always_ff @(posedge clk_i) begin
-    if (!rst_ni) begin
-      pc_next_q <= BootAddr;
-    end else if (mem_ready_i && mem_valid_o) begin
-      pc_next_q <= pc_next_d;
-      fetch_addr_q <= fetch_addr_d;
-    end else if (control_hazard_i) begin
-      pc_next_q <= pc_target_i;
-    end
-  end
+    req_valid = mem_ready_i && mem_valid_o;
+    next_addr = control_hazard_i ? pc_target_i : req_addr_q;
+    inc_next_addr = req_valid ? next_addr + 'h4 : next_addr;
 
-  always_comb begin
-    fetch_state_d = fetch_state_q;
-
-    case (fetch_state_q)
-      Idle: if (mem_ready_i && mem_valid_o) fetch_state_d = Fetching;
-      Fetching: begin
-        if (control_hazard_i && !mem_rvalid_i) begin
-          fetch_state_d = Hazard;
-        end else if (!(mem_ready_i && mem_valid_o)) begin
-          fetch_state_d = Idle;
+    if (wait_resp_q) begin : wait_resp_valid
+      if (control_hazard_i) begin
+        wait_resp_d = req_valid;
+        req_addr_d = inc_next_addr;
+        resp_addr_d = pc_target_i;
+      end else if (mem_rvalid_i) begin
+        wait_resp_d = req_valid;
+        if (req_valid) begin
+          req_addr_d = inc_next_addr;
+          resp_addr_d = req_addr_q;
         end
       end
-      Hazard: if (mem_rvalid_i) fetch_state_d = Fetching;
-      default: fetch_state_d = Idle;
-    endcase
+    end else begin : wait_req_valid
+      wait_resp_d = req_valid;
+      if (control_hazard_i) begin
+        req_addr_d = inc_next_addr;
+        resp_addr_d = pc_target_i;
+      end else if (req_valid) begin
+        req_addr_d = inc_next_addr;
+        resp_addr_d = req_addr_q;
+      end
+    end
   end
 
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin
-      fetch_state_q <= Fetching;
+      wait_resp_q <= 1'b0;
+      req_addr_q <= BootAddr;
     end else begin
-      fetch_state_q <= fetch_state_d;
+      wait_resp_q <= wait_resp_d;
+      req_addr_q <= req_addr_d;
+      resp_addr_q <= resp_addr_d;
     end
   end
 
   logic [31:0] instmem_high, instmem_low, fetch_rdata;
   assign instmem_high = mem_rdata_i[63:32];
   assign instmem_low  = mem_rdata_i[31:00];
-  assign fetch_rdata = fetch_addr_q[2] == 1'b0 ? instmem_low : instmem_high;
+  assign fetch_rdata = resp_addr_q[2] == 1'b0 ? instmem_low : instmem_high;
 
-  assign fifo_wr_data = {fetch_addr_q, fetch_rdata};
+  assign fifo_wr_data = {resp_addr_q, fetch_rdata};
 
   fifo #(.DepthLog2(2), .Width(Xlen + Ilen)) fifo_inst (
     .clk_i(clk_i),

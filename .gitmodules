@@ -4,3 +4,7 @@
 [submodule "third_party/riscv-arch-test"]
 	path = dv/riscof/riscv-arch-test
 	url = https://github.com/riscv-non-isa/riscv-arch-test
+[submodule "dv/riscv-formal/riscv-formal"]
+	path = dv/riscv-formal/riscv-formal
+	url = https://github.com/YosysHQ/riscv-formal
+  ignore = dirty

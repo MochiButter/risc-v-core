@@ -12,6 +12,8 @@ in the `doc/` directory for more details on how to run each test.
 
 To run the RISC-V architectural tests, go to the `dv/riscof` dir and run
 `make run-riscof`.
+To run the formal tests, go to the `dv/riscv-formal` dir and run
+`make run`
 
 ## CSR implementation details
 

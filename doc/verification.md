@@ -3,7 +3,7 @@
 ## Simple testbenches
 Prerequisites:
 
-- RISC-V GNU toolchain (assumes rv32i)
+- RISC-V GNU toolchain (assumes riscv64-unknown-elf)
 - cocotb >= 2.0
 - iverilog
 - verilator
@@ -45,7 +45,7 @@ Prerequisites:
 - riscof
 - riscv-arch-test
 - sail-riscv >= 0.8
-- RISC-V GNU toolchain (assumes rv32i)
+- RISC-V GNU toolchain (assumes riscv64-unknown-elf)
 - The [uvm testbench](#uvm-testbench)
 
 The test already assumes riscof and sail-riscv is installed and in the `PATH`,
@@ -53,7 +53,7 @@ and that the environment variable `ARCH_TEST_DIR` points to the cloned
 riscv-arch-test repository (by default in `dv/riscof`).
 Sail can be version 0.8 / 0.9.
 
-To install riscof to run without any additonal config:
+To install riscof to run without any additional config:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
@@ -66,4 +66,29 @@ pip3 install git+https://github.com/riscv/riscof.git
 Run the tests with
 ```
 make run-riscof
+```
+
+## riscv-formal
+Prerequisites:
+
+- Yosys
+- SBY
+- Boolector
+- Verilog_VCD
+- zachjs/sv2v
+- bash
+
+The makefile will make a directory in the `riscv-formal/cores` directory, and
+copy the necessary files to the `cores/core` directory.
+The core RTL needs to be converted to Verilog, since the imports in each module
+was causing trouble with the tools.
+This is done together with the copying steps in the Makefile.
+Skips the CSR checks as the core hasn't set up the traces yet.
+Checks like `pw_fwd` would take too long (more than 2 hours), so all checks are
+set to a depth of 15.
+The tests can be run after the submodule has been downloaded.
+
+Run the tests with
+```
+make status
 ```

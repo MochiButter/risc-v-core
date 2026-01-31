@@ -20,6 +20,30 @@ module core
   ,output logic [MaskBits - 1:0]   datamem_wmask_o
   ,input  logic [Xlen - 1:0]       datamem_rdata_i
   ,input  logic                    datamem_rvalid_i
+
+`ifdef RISCV_FORMAL
+  ,output logic [Nret        - 1 : 0] rvfi_valid
+  ,output logic [Nret *   64 - 1 : 0] rvfi_order
+  ,output logic [Nret * Ilen - 1 : 0] rvfi_insn
+  ,output logic [Nret        - 1 : 0] rvfi_trap
+  ,output logic [Nret        - 1 : 0] rvfi_halt
+  ,output logic [Nret        - 1 : 0] rvfi_intr
+  ,output logic [Nret * 2    - 1 : 0] rvfi_mode
+  ,output logic [Nret * 2    - 1 : 0] rvfi_ixl
+  ,output logic [Nret *    5 - 1 : 0] rvfi_rs1_addr
+  ,output logic [Nret *    5 - 1 : 0] rvfi_rs2_addr
+  ,output logic [Nret * Xlen - 1 : 0] rvfi_rs1_rdata
+  ,output logic [Nret * Xlen - 1 : 0] rvfi_rs2_rdata
+  ,output logic [Nret *    5 - 1 : 0] rvfi_rd_addr
+  ,output logic [Nret * Xlen - 1 : 0] rvfi_rd_wdata
+  ,output logic [Nret * Xlen - 1 : 0] rvfi_pc_rdata
+  ,output logic [Nret * Xlen - 1 : 0] rvfi_pc_wdata
+  ,output logic [Nret * Xlen   - 1 : 0] rvfi_mem_addr
+  ,output logic [Nret * Xlen/8 - 1 : 0] rvfi_mem_rmask
+  ,output logic [Nret * Xlen/8 - 1 : 0] rvfi_mem_wmask
+  ,output logic [Nret * Xlen   - 1 : 0] rvfi_mem_rdata
+  ,output logic [Nret * Xlen   - 1 : 0] rvfi_mem_wdata
+`endif
   );
 
   logic idex_wr_valid, idex_wr_ready, idex_rd_ready, idex_rd_valid;
@@ -210,10 +234,13 @@ module core
   logic [Xlen - 1:0] mems_load_data;
 
   /* Frowarding control */
+  logic [4:0] mems_rs1_addr, mems_rs2_addr;
+  assign mems_rs1_addr = exmem_q.rs1_addr;
+  assign mems_rs2_addr = exmem_q.rs2_addr;
   logic mems_wbs_rs1_fwd, mems_wbs_rs2_fwd;
-  assign mems_wbs_rs1_fwd = wbs_is_wb && exmem_q.rs1_addr != '0 &&
+  assign mems_wbs_rs1_fwd = wbs_is_wb && mems_rs1_addr != '0 &&
     exmem_q.rs1_addr == memwb_q.rd_addr;
-  assign mems_wbs_rs2_fwd = wbs_is_wb && exmem_q.rs2_addr != '0 &&
+  assign mems_wbs_rs2_fwd = wbs_is_wb && mems_rs2_addr != '0 &&
     exmem_q.rs2_addr == memwb_q.rd_addr;
 
   logic [Xlen - 1:0] mems_rs1_fwd, mems_rs2_fwd;
@@ -239,7 +266,7 @@ module core
 
   assign mems_jump_target = (exmem_q.jump_type == JmpJalr) ?
     {exmem_q.alu_res[Xlen - 1:1], 1'b0} :
-    (mems_inst_pc + (exmem_q.is_fencei ? 4 : mems_inst_imm));
+    (mems_inst_pc + (exmem_q.is_fencei ? 'h4 : mems_inst_imm));
   assign mems_pc_target = mems_csr_raise_trap ? mems_csr_trap_vector : mems_jump_target;
   assign mems_inst_misalign = mems_jump && mems_jump_target[1:0] != 2'b00;
 
@@ -366,6 +393,8 @@ module core
   /* ===== [MEM -> WB] ===== */
 
   logic wbs_reg_wb_en;
+  logic [4:0] wbs_rd_addr;
+  assign wbs_rd_addr = memwb_q.rd_addr;
 
   logic [Xlen - 1:0] wbs_load_data, wbs_csr_rd_data,
     wbs_inst_imm, wbs_inst_pc, wbs_alu_res;
@@ -394,10 +423,106 @@ module core
     .rst_ni        (rst_ni),
     .rs1_addr_i    (idex_q.rs1_addr),
     .rs2_addr_i    (idex_q.rs2_addr),
-    .rd_addr_i     (memwb_q.rd_addr),
+    .rd_addr_i     (wbs_rd_addr),
     .rd_data_i     (wbs_rd_data),
     .rd_write_en_i (wbs_reg_wb_en),
     .rs1_data_o    (exs_rs1_data),
     .rs2_data_o    (exs_rs2_data)
   );
+
+`ifdef RISCV_FORMAL
+  /* A mini-pipeline that uses the main pipeline's signal, but contains data
+   * that would be useless for the write-back stage outside of the rvfi trace.
+   */
+  logic [Ilen - 1:0] inst_data_q [0:2];
+  logic [Xlen - 1:0] inst_pc_next_q, mem_addr_q, mem_rdata_q, mem_wdata_q,
+    rs1_data_q, rs2_data_q;
+  logic [MaskBits - 1:0] mem_wmask_q;
+  logic [4:0] rs1_addr_q, rs2_addr_q;
+  logic intr_q, expt_valid_q, jump_q;
+  mem_type_e mem_type_q;
+
+  // rvfi asks addresses to always be aligned to the 4/8 byte boundary
+  localparam logic [Xlen - 1:0] AddrMask =
+    {{Xlen - $clog2(MaskBits){1'b1}}, $clog2(MaskBits)'(0)};
+
+  always_ff @(posedge clk_i) begin
+    if (!rst_ni) begin
+      for (int i = 0; i < 3; i ++) begin
+        inst_data_q[i] <= '0;
+      end
+      expt_valid_q <= '0;
+      intr_q <= '0;
+      rs1_addr_q <= '0;
+      rs2_addr_q <= '0;
+      rs1_data_q <= '0;
+      rs2_data_q <= '0;
+      inst_pc_next_q <= '0;
+      jump_q <= '0;
+      mem_type_q <= MemNone;
+      mem_wdata_q <= '0;
+      mem_rdata_q <= '0;
+    end else begin
+      if (idex_wr_valid && idex_wr_ready) begin
+        inst_data_q[0] <= ifs_inst_data;
+      end
+      if (exmem_wr_valid && exmem_wr_ready) begin
+        inst_data_q[1] <= inst_data_q[0];
+      end
+      if (memwb_wr_valid) begin
+        inst_data_q[2] <= inst_data_q[1];
+        expt_valid_q <= mems_expt_valid;
+        rs1_addr_q <= mems_rs1_addr;
+        rs2_addr_q <= mems_rs2_addr;
+        rs1_data_q <= mems_rs1_fwd;
+        rs2_data_q <= mems_rs2_fwd;
+        inst_pc_next_q <= mems_jump_target;
+        jump_q <= mems_jump;
+        mem_type_q <= mems_mem_type;
+        mem_addr_q <= (datamem_addr_o & AddrMask);
+        mem_rdata_q <= datamem_rdata_i;
+        mem_wdata_q <= datamem_wdata_o;
+        mem_wmask_q <= datamem_wmask_o;
+      end
+      if (memwb_rd_valid) begin
+        intr_q <= memwb_q.raise_trap;
+      end
+    end
+  end
+
+  assign rvfi_valid = memwb_rd_valid;
+
+  always_ff @(posedge clk_i) begin
+    if (!rst_ni) begin
+      rvfi_order <= '0;
+    end else if (memwb_rd_valid) begin
+      rvfi_order <= rvfi_order + 64'd1;
+    end
+  end
+
+  assign rvfi_insn = inst_data_q[2];
+  assign rvfi_trap = expt_valid_q;
+  assign rvfi_halt = 1'b0;
+  assign rvfi_intr = intr_q;
+  assign rvfi_mode = 2'h3;
+  assign rvfi_ixl  = 2'h2;
+
+  assign rvfi_rs1_addr  = rs1_addr_q;
+  assign rvfi_rs2_addr  = rs2_addr_q;
+  assign rvfi_rs1_rdata = rs1_data_q;
+  assign rvfi_rs2_rdata = rs2_data_q;
+
+  assign rvfi_rd_addr  = wbs_reg_wb_en ? wbs_rd_addr : '0;
+  assign rvfi_rd_wdata = (wbs_reg_wb_en && wbs_rd_addr != '0) ? wbs_rd_data : '0;
+
+  assign rvfi_pc_rdata = wbs_inst_pc;
+  // does not take into account intr/expt/dbg
+  assign rvfi_pc_wdata = jump_q ? inst_pc_next_q : (wbs_inst_pc + 'h4);
+
+  assign rvfi_mem_addr  = (mem_type_q != MemNone)  ?   mem_addr_q : '0;
+  assign rvfi_mem_rmask = (mem_type_q == MemLoad)  ? ~mem_wmask_q : '0;
+  assign rvfi_mem_wmask = (mem_type_q == MemStore) ?  mem_wmask_q : '0;
+  assign rvfi_mem_rdata = (mem_type_q == MemLoad)  ?  mem_rdata_q : '0;
+  assign rvfi_mem_wdata = (mem_type_q == MemStore) ?  mem_wdata_q : '0;
+`endif
 endmodule

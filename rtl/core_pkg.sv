@@ -1,6 +1,7 @@
 package core_pkg;
   parameter Xlen = 64;
   parameter Ilen = 32;
+  parameter Nret = 1;
 
   localparam MaskBits = Xlen / 8;
 

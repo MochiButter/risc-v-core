@@ -1,6 +1,6 @@
 hart_ids: [0]
 hart0:
-  ISA: RV64IZifencei
+  ISA: RV64IZicsr_Zifencei
   physical_addr_sz: 24
   User_Spec_Version: '2.3'
   hw_data_misaligned_support: False

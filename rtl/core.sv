@@ -309,7 +309,7 @@ module core
       if (mems_inst_misalign) begin
         mems_expt_valid = 1'b1;
         mems_expt_cause = InstAddrMisaligned;
-        mems_expt_value = mems_pc_target;
+        mems_expt_value = mems_jump_target;
       end else if (mems_lsu_misalign && mems_mem_type != MemNone) begin
         mems_expt_valid = 1'b1;
         mems_expt_cause = (mems_mem_type == MemLoad) ? LdAddrMisaligned : StAddrMisaligned;

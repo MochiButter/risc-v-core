@@ -4,7 +4,7 @@
 <             sail_config = json.loads(sail_config.stdout)
 ---
 >             sail_config = JsonComment(json).loads(sail_config.stdout)
-120,121c122,125
+120,121c121,125
 <         sail_config["memory"]["pmp"]["grain"] = pmp_flags["pmp-grain"]
 <         sail_config["memory"]["pmp"]["count"] = pmp_flags["pmp-count"]
 ---
@@ -12,3 +12,19 @@
 >             if isa_yaml['hart0']["PMP"]["implemented"] == True:
 >                 sail_config["memory"]["pmp"]["grain"] = pmp_flags["pmp-grain"]
 >                 sail_config["memory"]["pmp"]["count"] = pmp_flags["pmp-count"]
+> 
+123c127,138
+<         
+---
+> 
+>         sail_config["memory"]["misaligned"]["supported"] = False
+> 
+>         for ext in sail_config["extensions"]:
+>             if "supported" in sail_config["extensions"][ext]:
+>                 sail_config["extensions"][ext]["supported"] = False
+>             elif ext == "V":
+>                 sail_config["extensions"]["V"]["support_level"] = "Disabled"
+> 
+>         sail_config["extensions"]["Zicsr"]["supported"] = True
+>         sail_config["extensions"]["Zifencei"]["supported"] = True
+> 

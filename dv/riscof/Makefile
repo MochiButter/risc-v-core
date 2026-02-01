@@ -14,6 +14,7 @@ uvm-build: $(wildcard $(RTL_DIR)/*.sv)
 sail_cSim: $(ARCH_TEST_DIR)
 	cp -r $</riscof-plugins/rv64/sail_cSim .
 	patch sail_cSim/riscof_sail_cSim.py < sail_patch.diff
+	patch sail_cSim/env/model_test.h < sail_env.diff
 
 run-riscof: uvm-build sail_cSim
 	riscof run --config=config.ini --suite=$(ARCH_TEST_DIR)/riscv-test-suite \

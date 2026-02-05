@@ -1,4 +1,4 @@
-# risc v core
+# riscv core
 
 A 5-stage RISC-V core that implements the RV64I_Zicsr_Zifencei instruction set.
 
@@ -19,20 +19,4 @@ To run the formal tests, go to the `dv/riscv-formal` dir and run
 
 The core implements the csr instructions (write, set, clear, and their
 immediate counterparts), as well as the ecall, ebreak, and mret instructions.
-The `mhartid`, `mtvec`, `mscratch`, `mepc`, `mcause` registers are supported.
-
-## References
-
-[veryl-riscv-book](https://cpu.kanataso.net/)
-
-[Patterson & Hennessy, Computer organization and design : the hardware/software interface, RISC-V edition](https://search.worldcat.org/en/title/1383657830)
-
-[rice](https://github.com/taichi-ishitani/rice/)
-
-[ibex](https://github.com/lowRISC/ibex/)
-
-[cva6](https://github.com/openhwgroup/cva6)
-
-[riscv-card](https://github.com/jameslzhu/riscv-card)
-
-[RISC-V Ratified Specification](https://riscv.org/specifications/ratified/)
+The `mhartid`, `misa`, `mtvec`, `mscratch`, `mepc`, `mcause`, `mtval` registers are supported.

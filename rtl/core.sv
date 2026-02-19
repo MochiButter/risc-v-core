@@ -326,7 +326,7 @@ module core
     .expt_valid_i  (mems_expt_valid),
     .expt_cause_i  (mems_expt_cause),
     .expt_value_i  (mems_expt_value),
-
+    .inst_ret_i    (memwb_rd_valid && !memwb_q.expt_valid),
     .rs1_data_i    (mems_csr_rs1_data),
     .csr_addr_i    (exmem_q.csr_addr),
     .rd_data_o     (memwb_d.csr_rd_data),
@@ -376,7 +376,7 @@ module core
   assign memwb_d.inst_pc    = exmem_q.inst_pc;
   assign memwb_d.alu_res    = exmem_q.alu_res;
   assign memwb_d.rd_addr    = exmem_q.rd_addr;
-  assign memwb_d.raise_trap = mems_csr_raise_trap;
+  assign memwb_d.expt_valid = mems_expt_valid;
 
   // wb is always ready to accept rd_data
   pipeline_reg #(.Width($bits(memwb_reg_t))) pipeline_memwb (
@@ -416,7 +416,7 @@ module core
     endcase
   end
 
-  assign wbs_reg_wb_en = (memwb_q.reg_wb_src != WbNone) && memwb_rd_valid && !memwb_q.raise_trap;
+  assign wbs_reg_wb_en = (memwb_q.reg_wb_src != WbNone) && memwb_rd_valid && !memwb_q.expt_valid;
 
   register #(.RegWidth(Xlen)) reg_inst (
     .clk_i         (clk_i),
@@ -439,7 +439,8 @@ module core
     rs1_data_q, rs2_data_q;
   logic [MaskBits - 1:0] mem_wmask_q;
   logic [4:0] rs1_addr_q, rs2_addr_q;
-  logic intr_q, expt_valid_q, jump_q;
+  logic intr_q [0:1];
+  logic jump_q;
   mem_type_e mem_type_q;
 
   // rvfi asks addresses to always be aligned to the 4/8 byte boundary
@@ -451,8 +452,9 @@ module core
       for (int i = 0; i < 3; i ++) begin
         inst_data_q[i] <= '0;
       end
-      expt_valid_q <= '0;
-      intr_q <= '0;
+      for (int i = 0; i < 2; i ++) begin
+        intr_q[i] <= '0;
+      end
       rs1_addr_q <= '0;
       rs2_addr_q <= '0;
       rs1_data_q <= '0;
@@ -471,7 +473,7 @@ module core
       end
       if (memwb_wr_valid) begin
         inst_data_q[2] <= inst_data_q[1];
-        expt_valid_q <= mems_expt_valid;
+        intr_q[0] <= mems_csr_raise_trap;
         rs1_addr_q <= mems_rs1_addr;
         rs2_addr_q <= mems_rs2_addr;
         rs1_data_q <= mems_rs1_fwd;
@@ -485,7 +487,7 @@ module core
         mem_wmask_q <= datamem_wmask_o;
       end
       if (memwb_rd_valid) begin
-        intr_q <= memwb_q.raise_trap;
+        intr_q[1] <= intr_q[0];
       end
     end
   end
@@ -501,9 +503,9 @@ module core
   end
 
   assign rvfi_insn = inst_data_q[2];
-  assign rvfi_trap = expt_valid_q;
+  assign rvfi_trap = memwb_q.expt_valid;
   assign rvfi_halt = 1'b0;
-  assign rvfi_intr = intr_q;
+  assign rvfi_intr = intr_q[1];
   assign rvfi_mode = 2'h3;
   assign rvfi_ixl  = 2'h2;
 

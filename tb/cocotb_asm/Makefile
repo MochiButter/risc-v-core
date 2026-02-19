@@ -1,4 +1,4 @@
-SIM ?= icarus
+SIM ?= verilator
 WAVES ?= 1
 
 TOPLEVEL_LANG := verilog

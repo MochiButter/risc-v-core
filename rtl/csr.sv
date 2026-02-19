@@ -12,6 +12,8 @@ module csr
   ,input  csr_mcause_e       expt_cause_i
   ,input  logic [Xlen - 1:0] expt_value_i
 
+  ,input  logic              inst_ret_i
+
   ,input  logic [Xlen - 1:0] rs1_data_i
   ,input  logic [11:0]       csr_addr_i
   ,output logic [Xlen - 1:0] rd_data_o
@@ -41,6 +43,10 @@ module csr
 
   logic [Xlen - 1:0] mcause_d, mcause_q;
   logic [Xlen - 1:0] mtval_d, mtval_q;
+  logic [Xlen - 1:0] mcycle_d, mcycle_q, minstret_d, minstret_q;
+
+  // only the bits 2 and 0 are implemented, the rest are hard-coded zeros
+  logic [1:0] mcntinhib_d, mcntinhib_q;
 
   logic csr_wsc, csr_mret;
   assign csr_wsc = csr_op_i == OpCSRRW ||
@@ -54,13 +60,16 @@ module csr
 
   always_comb begin
     case (csr_addr_i)
-      CSRmhartid:  rd_data_o = MHartId;
-      CSRmisa:     rd_data_o = Misa;
-      CSRmtvec:    rd_data_o = mtvec_q;
-      CSRmscratch: rd_data_o = mscratch_q;
-      CSRmepc:     rd_data_o = mepc_q;
-      CSRmcause:   rd_data_o = mcause_q;
-      CSRmtval:    rd_data_o = mtval_q;
+      CSRmhartid:       rd_data_o = MHartId;
+      CSRmisa:          rd_data_o = Misa;
+      CSRmtvec:         rd_data_o = mtvec_q;
+      CSRmcountinhibit: rd_data_o = {61'd0, mcntinhib_q[1], 1'b0, mcntinhib_q[0]};
+      CSRmscratch:      rd_data_o = mscratch_q;
+      CSRmepc:          rd_data_o = mepc_q;
+      CSRmcause:        rd_data_o = mcause_q;
+      CSRmtval:         rd_data_o = mtval_q;
+      CSRmcycle:        rd_data_o = mcycle_q;
+      CSRminstret:      rd_data_o = minstret_q;
       // unimplemented csrs shouls read 0
       // for forwards compatibility
       default: rd_data_o = '0;
@@ -72,21 +81,27 @@ module csr
       default: csr_wdata = 'x;
     endcase
     mtvec_d = mtvec_q;
+    mcntinhib_d = mcntinhib_q;
     mscratch_d = mscratch_q;
     mepc_d = mepc_q;
     mcause_d = mcause_q;
     mtval_d = mtval_q;
+    mcycle_d = mcycle_q + (Xlen)'(!mcntinhib_q[0]);
+    minstret_d = inst_ret_i ? minstret_q + (Xlen)'(!mcntinhib_q[1]) : minstret_q;
     if (valid_i && raise_expt) begin
       mepc_d   = pc_i;
       mcause_d = expt_cause_i;
       mtval_d  = expt_value_i;
     end else if (valid_i && csr_wsc) begin
       case (csr_addr_i)
-        CSRmtvec:    mtvec_d    = mtvec_mask;
-        CSRmscratch: mscratch_d = csr_wdata;
-        CSRmepc:     mepc_d     = csr_wdata & MepcMask;
-        CSRmcause:   mcause_d   = csr_wdata;
-        CSRmtval:    mtval_d    = csr_wdata;
+        CSRmtvec:         mtvec_d     = mtvec_mask;
+        CSRmcountinhibit: mcntinhib_d = {csr_wdata[2], csr_wdata[0]};
+        CSRmscratch:      mscratch_d  = csr_wdata;
+        CSRmepc:          mepc_d      = csr_wdata & MepcMask;
+        CSRmcause:        mcause_d    = csr_wdata;
+        CSRmtval:         mtval_d     = csr_wdata;
+        CSRmcycle:        mcycle_d    = csr_wdata;
+        CSRminstret:      minstret_d  = csr_wdata;
         default: ;
       endcase
     end
@@ -94,17 +109,23 @@ module csr
 
   always_ff @(posedge clk_i) begin
     if (!rst_ni) begin
-      mtvec_q    <= '0;
-      mscratch_q <= '0;
-      mepc_q     <= '0;
-      mcause_q   <= '0;
-      mtval_q    <= '0;
+      mtvec_q     <= '0;
+      mcntinhib_q <= '0;
+      mscratch_q  <= '0;
+      mepc_q      <= '0;
+      mcause_q    <= '0;
+      mtval_q     <= '0;
+      mcycle_q    <= '0;
+      minstret_q  <= '0;
     end else begin
-      mtvec_q    <= mtvec_d;
-      mscratch_q <= mscratch_d;
-      mepc_q     <= mepc_d;
-      mcause_q   <= mcause_d;
-      mtval_q    <= mtval_d;
+      mtvec_q     <= mtvec_d;
+      mcntinhib_q <= mcntinhib_d;
+      mscratch_q  <= mscratch_d;
+      mepc_q      <= mepc_d;
+      mcause_q    <= mcause_d;
+      mtval_q     <= mtval_d;
+      mcycle_q    <= mcycle_d;
+      minstret_q  <= minstret_d;
     end
   end
 endmodule

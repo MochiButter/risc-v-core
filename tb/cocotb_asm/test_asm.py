@@ -125,6 +125,9 @@ async def run_program(dut, filepath, check_mem=None):
             logger.error("Timeout reached")
             assert(0)
             break
+    cycles = dut.csr_inst.mcycle_q.get().to_unsigned()
+    instret = dut.csr_inst.minstret_q.get().to_unsigned()
+    logger.info(f"Completed at {cycles / instret} cpi")
     instmem.dump_mem()
     if check_mem:
         check_mem(instmem.mem)
@@ -257,3 +260,11 @@ async def test_misalign(dut):
 async def test_fencei(dut):
     await run_program(dut, "fencei.bin")
     assert dut.reg_inst.regs_q[1].get() == 0x42
+
+@cocotb.test()
+async def test_zicnt(dut):
+    await run_program(dut, "zicnt.bin")
+    assert dut.reg_inst.regs_q[1].get() == 16
+    assert dut.reg_inst.regs_q[2].get() != 16
+    assert dut.reg_inst.regs_q[3].get() != 16
+    assert dut.reg_inst.regs_q[4].get() == 16

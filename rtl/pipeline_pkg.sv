@@ -76,6 +76,6 @@ package pipeline_pkg;
     logic [Xlen - 1:0] inst_pc;
     logic [Xlen - 1:0] alu_res;
     logic [4:0] rd_addr;
-    logic raise_trap;
+    logic expt_valid;
   } memwb_reg_t;
 endpackage

@@ -2,17 +2,20 @@ package csr_pkg;
   import core_pkg::Xlen;
 
   typedef enum logic[11:0] {
-    CSRmhartid   = 12'hf14,
-    CSRmstatus   = 12'h300,
-    CSRmisa      = 12'h301,
-    CSRmie       = 12'h304,
-    CSRmtvec     = 12'h305,
-    CSRmstatush  = 12'h310,
-    CSRmscratch  = 12'h340,
-    CSRmepc      = 12'h341,
-    CSRmcause    = 12'h342,
-    CSRmtval     = 12'h343,
-    CSRmip       = 12'h344
+    CSRmhartid       = 12'hf14,
+    CSRmstatus       = 12'h300,
+    CSRmisa          = 12'h301,
+    CSRmie           = 12'h304,
+    CSRmtvec         = 12'h305,
+    CSRmcounteren    = 12'h306,
+    CSRmcountinhibit = 12'h320,
+    CSRmscratch      = 12'h340,
+    CSRmepc          = 12'h341,
+    CSRmcause        = 12'h342,
+    CSRmtval         = 12'h343,
+    CSRmip           = 12'h344,
+    CSRmcycle        = 12'hB00,
+    CSRminstret      = 12'hB02
   } csr_addrs_e;
 
   typedef enum logic [Xlen - 1:0] {

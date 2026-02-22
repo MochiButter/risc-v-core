@@ -3,6 +3,7 @@ VERILATOR_ARGS += --trace-fst --trace-structs
 VERILATOR_ARGS += --main-top-name "-" 
 VERILATOR_ARGS += --x-assign unique --x-initial unique
 VERILATOR_ARGS += -Wall -Wno-fatal
+VERILATOR_ARGS += -DSIMLIB_VERILATOR_COMPAT
 
 IVERILOG_ARGS := -g2005-sv -Wall
 

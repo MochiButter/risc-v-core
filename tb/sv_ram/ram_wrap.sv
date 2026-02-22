@@ -10,6 +10,8 @@ module ram_wrap
   ,output [31:0] rd_data_o
   ,output [0:0] rd_valid_o
   );
+  logic [3:0] wmask_i;
+  assign wmask_i = wr_en_i;
   ram_1rw_sync #(.Width(32), .Depth(256), .UseInitFile(1),
     .InitFile({`BINPATH, "tb/sv_ram/ram_init.hex"})) 
     ram_inst (.*);

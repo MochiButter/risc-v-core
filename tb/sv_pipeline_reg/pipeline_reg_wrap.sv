@@ -1,6 +1,6 @@
 module pipeline_reg_wrap
   (input [0:0] clk_i
-  ,input [0:0] rst_i
+  ,input [0:0] rst_ni
 
   ,input [0:0] wr_valid_i
   ,input [63:0] wr_data_i

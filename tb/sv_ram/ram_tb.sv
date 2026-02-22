@@ -35,12 +35,12 @@ module ram_tb ();
       if (!ready_o) begin
         $display("ready_o didn't go high");
         $display("\033[0;31mSIM FAILED\033[0m");
-        $finish();
+        $fatal();
       end
       if (~rd_valid_o) begin
         $display("rd_valid_o didn't go high");
         $display("\033[0;31mSIM FAILED\033[0m");
-        $finish();
+        $fatal();
       end
       $display("[0x%08h] 0x%08h", addr_i, rd_data_o);
     end
@@ -62,7 +62,7 @@ module ram_tb ();
     if (rd_data_o != 32'h4200_00ff) begin
       $display("read data doesn't match expected: 0x%08h", rd_data_o);
       $display("\033[0;31mSIM FAILED\033[0m");
-      $finish();
+      $fatal();
     end
     $display("[0x%08h] 0x%08h", addr_i, rd_data_o);
 

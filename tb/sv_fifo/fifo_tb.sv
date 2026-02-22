@@ -69,13 +69,13 @@ module fifo_tb();
     if (count == Depth && wr_ready_o && (Depth > 1 || !rd_ready_i)) begin
       $display("Fifo was ready when full");
       $display("\033[0;31mSIM FAILED\033[0m");
-      $finish();
+      $fatal();
     end
 `ifndef SIM_PIPELINE
     if (Depth - count < 2 && wr_ready_two_o) begin
       $display("Fifo gave the wrong info on two empty slots");
       $display("\033[0;31mSIM FAILED\033[0m");
-      $finish();
+      $fatal();
     end
 `endif
     if ((wr_valid_i && tmp_count < Depth)
@@ -83,7 +83,7 @@ module fifo_tb();
       if (!wr_ready_o) begin
         $display("Fifo was not ready when writable");
         $display("\033[0;31mSIM FAILED\033[0m");
-        $finish();
+        $fatal();
       end
       if (verbose) $display("Wrote [0x%8h] %8h", wr_data_i[63:32], wr_data_i[31:0]);
       count ++;
@@ -92,20 +92,20 @@ module fifo_tb();
     if (count == 0 && rd_valid_o) begin
       $display("Fifo was valid when empty");
       $display("\033[0;31mSIM FAILED\033[0m");
-      $finish();
+      $fatal();
     end
     if (rd_ready_i && tmp_count > 0) begin
       if (!rd_valid_o) begin
         $display("Fifo was not valid when readable");
         $display("\033[0;31mSIM FAILED\033[0m");
-        $finish();
+        $fatal();
       end
       if (verbose) $display("Read [0x%8h] %8h", rd_data_o[63:32], rd_data_o[31:0]);
       count --;
       if (rd_data_o !== fifo_qu.pop_front()) begin
         $display("Bad rd output: %16h", rd_data_o);
         $display("\033[0;31mSIM FAILED\033[0m");
-        $finish();
+        $fatal();
       end
     end
     @(negedge clk_i);

@@ -27,8 +27,6 @@ module fifo
     $error("Fifo must have depth of at least 2; use pipeline_reg instead.");
   end : l_depth_warning
 
-  localparam Depth = (1 << DepthLog2);
-
   logic [DepthLog2 - 1:0] ptr_write_q, ptr_write_d, ptr_read_q, ptr_read_d,
     ptr_write_two;
   logic [Width - 1:0] rd_data_mem, rd_data_reg;
@@ -63,12 +61,13 @@ module fifo
   end
 
   ram_1r1w_sync #(
-    .Width(Width), .Depth(Depth)
+    .DataWidth(Width), .AddrWidth(DepthLog2)
   ) u_mem (
     .clk_i(clk_i),
     .w_en_i(write),
     .waddr_i(ptr_write_q),
     .wdata_i(wr_data_i),
+    .wmask_i(),
     .r_en_i(!forward_data_d),
     .raddr_i(ptr_read_d),
     .rdata_o(rd_data_mem)

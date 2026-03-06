@@ -1,0 +1,60 @@
+SIM ?= verilator
+WAVES ?= 1
+
+TOPLEVEL_LANG := verilog
+ifeq ($(SIM), verilator)
+EXTRA_ARGS = -Wno-fatal --trace --trace-fst --trace-structs -DRISCV_FORMAL
+endif
+
+ROOT_DIR := $(PWD)/../..
+
+VERILOG_INCLUDE_DIRS += $(ROOT_DIR)/rtl/soc
+
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/csr_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/pipeline_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/alu.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/decode.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/ram_1r1w_sync.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/ram_1rw_sync.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/fifo.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/fetch.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/mem_lsu.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/register.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/csr.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/pipeline_reg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/skid_buffer.sv
+
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/axil_pkg.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/axil_if.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/arbiter.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/mem_to_axil.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/ram_sync_axil.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/soc.sv
+
+COCOTB_TOPLEVEL := soc
+COCOTB_TEST_MODULES := test_soc
+
+TEST_FILES := load store loop misalign fencei
+CUSTOM_SIM_DEPS := $(foreach test,$(TEST_FILES),sim_build/$(test).bin)
+
+RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
+
+.PHONY: lint
+
+sim_build/%.elf: ../cocotb_asm/asm/%.s
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles \
+		-nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
+
+sim_build/%.hex: sim_build/%.elf
+	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 $< $@
+
+sim_build/%.bin: sim_build/%.elf
+	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
+lint: $(VERILOG_SOURCES)
+	verilator $(ROOT_DIR)/tb/verilator.vlt --lint-only --timing \
+		-top $(COCOTB_TOPLEVEL) -DRISCV_FORMAL $^ -Wall

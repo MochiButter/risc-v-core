@@ -103,7 +103,6 @@ module mem_lsu import core_pkg::*;
   always_comb begin
     state_d = state_q;
 
-    mem_valid_o = 1'b0;
     mem_busy_o = 1'b0;
     req_ff_en = 1'b0;
 
@@ -116,7 +115,6 @@ module mem_lsu import core_pkg::*;
         end
       end
       WaitForReady: begin
-        mem_valid_o = 1'b1;
         mem_busy_o = 1'b1;
         if (mem_ready_i) begin
           state_d = WaitForValid;
@@ -152,4 +150,5 @@ module mem_lsu import core_pkg::*;
   assign mem_addr_o = addr_q;
   assign mem_wdata_o = wdata_q;
   assign mem_wmask_o = wmask_q;
+  assign mem_valid_o = state_q == WaitForReady;
 endmodule

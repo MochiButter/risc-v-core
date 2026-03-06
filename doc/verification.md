@@ -14,9 +14,13 @@ Prerequisites:
 The directory `tb/cocotb_asm` contains a cocotb testbench with several tests
 that check if a set of instructions will execute and produce the expected
 results on the core.
-Each assembly file in `asm` will be compiled and loaded into the memory model.
-At the end of each test, the testbench will check the register and data memory
-values against the expected values.
+Each assembly file in the `asm` directory will be compiled and loaded into the
+memory model. At the end of each test, the testbench will check the register
+and data memory values against the expected values.
+
+The directory `tb/soc` also contains a cocotb testbench made for the soc top
+level module. It runs a selected few tests from the above related to memory
+operations expecting the same results as just the core alone.
 
 ### Block level SystemVerilog tests
 The directories  `tb/sv_*` contains testbenches for block-level tests.

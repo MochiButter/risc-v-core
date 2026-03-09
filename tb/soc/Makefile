@@ -9,6 +9,7 @@ endif
 ROOT_DIR := $(PWD)/../..
 
 VERILOG_INCLUDE_DIRS += $(ROOT_DIR)/rtl/soc
+VERILATOR_INCDIR := $(addprefix +incdir+,$(VERILOG_INCLUDE_DIRS))
 
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/core_pkg.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/csr_pkg.sv

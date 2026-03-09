@@ -1,3 +1,4 @@
+//`include "axil_macros.svh"
 module soc
   import axil_pkg::*;
   #()
@@ -5,20 +6,21 @@ module soc
   ,input  logic rst_ni
   );
 
-  logic [63:0] i_addr, i_rdata;
+  parameter BusWidth = 64;
+  localparam MaskBits = BusWidth / 8;
+
+  logic [BusWidth - 1:0] i_addr, i_rdata;
   logic i_ready, i_valid, i_rvalid;
 
-  logic [63:0] d_addr, d_wdata, d_rdata;
-  logic [7:0] d_wmask;
+  logic [BusWidth - 1:0] d_addr, d_wdata, d_rdata;
+  logic [MaskBits - 1:0] d_wmask;
   logic d_ready, d_valid, d_rvalid;
 
-  logic [63:0] bus_addr, bus_wdata, bus_rdata;
-  logic [7:0] bus_wmask;
+  logic [BusWidth - 1:0] bus_addr, bus_wdata, bus_rdata;
+  logic [MaskBits - 1:0] bus_wmask;
   logic bus_ready, bus_valid, bus_rvalid;
 
-  // NOTE: the reset signal is not handled asynchronously, so it's not fully
-  // compliant to the axi spec
-  axil_if core_axil();
+  `AXIL_LOGIC(core)
 
 `ifdef RISCV_FORMAL
   // To be used in the soc level test bench
@@ -133,7 +135,7 @@ module soc
     .mem_wmask_i  (bus_wmask),
     .mem_rdata_o  (bus_rdata),
     .mem_rvalid_o (bus_rvalid),
-    .m_axil       (core_axil)
+    `M_AXIL_CONN(core)
   );
 
   ram_sync_axil #(
@@ -143,6 +145,6 @@ module soc
   ) u_axil_ram (
     .clk_i  (clk_i),
     .rst_ni (rst_ni),
-    .s_axil (core_axil)
+    `S_AXIL_CONN(core)
   );
 endmodule

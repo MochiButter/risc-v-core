@@ -20,26 +20,26 @@ def get_resp_code(resp):
     logger.error("Resp code not within 2 bits")
     assert (0)
 
-def dump_axil_bus(cycle, axil_if):
+def dump_axil_bus(cycle, dut):
     ret = ""
 
-    if axil_if.awvalid.value and axil_if.awready.value:
-        addr = int(axil_if.awaddr.value)
+    if dut.core_awvalid.value and dut.core_awready.value:
+        addr = int(dut.core_awaddr.value)
         ret += f"waddr  [0x{addr:016x}]  "
-    if axil_if.wvalid.value and axil_if.wready.value:
-        wdata = int(axil_if.wdata.value)
+    if dut.core_wvalid.value and dut.core_wready.value:
+        wdata = int(dut.core_wdata.value)
         ret += f"wdata  0x{wdata:016x}  "
-    if axil_if.bvalid.value and axil_if.bready.value:
-        bresp = axil_if.bresp.value
+    if dut.core_bvalid.value and dut.core_bready.value:
+        bresp = dut.core_bresp.value
         bresp_str = get_resp_code(bresp)
         ret += f"write resp  {bresp_str}  "
 
-    if axil_if.arvalid.value and axil_if.arready.value:
-        addr = int(axil_if.araddr.value)
+    if dut.core_arvalid.value and dut.core_arready.value:
+        addr = int(dut.core_araddr.value)
         ret += f"read  [0x{addr:016x}]  "
-    if axil_if.rvalid.value and axil_if.rready.value:
-        rdata = int(axil_if.rdata.value)
-        rresp = axil_if.rresp.value
+    if dut.core_rvalid.value and dut.core_rready.value:
+        rdata = int(dut.core_rdata.value)
+        rresp = dut.core_rresp.value
         rresp_str = get_resp_code(rresp)
         ret += f"read resp  0x{rdata:016x} : {rresp_str}  "
 
@@ -77,7 +77,7 @@ async def run_program(dut, filepath, timeout):
     is_ebreak = False
     while not is_ebreak:
         is_ebreak = dut.rvfi_valid.value and dut.rvfi_insn.value == 0x00100073
-        axil = dump_axil_bus(cycles, dut.core_axil)
+        axil = dump_axil_bus(cycles, dut)
         if axil:
             logger.info(axil)
         await dut.clk_i.rising_edge

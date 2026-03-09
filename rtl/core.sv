@@ -420,7 +420,6 @@ module core
 
   register #(.RegWidth(Xlen)) reg_inst (
     .clk_i         (clk_i),
-    .rst_ni        (rst_ni),
     .rs1_addr_i    (idex_q.rs1_addr),
     .rs2_addr_i    (idex_q.rs2_addr),
     .rd_addr_i     (wbs_rd_addr),

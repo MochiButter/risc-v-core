@@ -9,7 +9,6 @@ module register
   #(parameter RegWidth = 32,
     parameter RegDepth = 32)
   (input logic clk_i
-  ,input logic rst_ni
 
   ,input  logic [$clog2(RegDepth) - 1:0] rs1_addr_i
   ,input  logic [$clog2(RegDepth) - 1:0] rs2_addr_i
@@ -23,28 +22,21 @@ module register
   logic [RegWidth - 1:0] regs_q [RegDepth - 1:1];
 
   // Dump register values for surfer. icarus borked
+  `ifdef VERILATOR
   initial begin
     for (int i = 1; i < RegDepth; i ++) begin
-      `ifdef VERILATOR
       $dumpfile("verilator.vcd");
       $dumpvars(0, regs_q[i]);
-      `endif
     end
   end
+  `endif
 
   // x0 will always be 0, otherwise output register contents
   assign rs1_data_o = rs1_addr_i != '0 ? regs_q[rs1_addr_i] : '0;
   assign rs2_data_o = rs2_addr_i != '0 ? regs_q[rs2_addr_i] : '0;
 
   always_ff @(posedge clk_i) begin
-    // NOTE: Reset-ing the registers may be the compiler's job
-    // but I'm doing it here for now
-    if (!rst_ni) begin
-      for (int i = 1; i < RegDepth; i++) begin
-        regs_q[i] <= '0;
-      end
-    // don't let writes to x0 happen (there is no register there anyways)
-    end else if (rd_write_en_i && (rd_addr_i != '0)) begin
+    if (rd_write_en_i && (rd_addr_i != '0)) begin
       regs_q[rd_addr_i] <= rd_data_i;
     end
   end

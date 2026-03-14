@@ -18,7 +18,7 @@ class Mem():
     addr_shamt = 2
 
     def __init__(self, datawidth, path=None):
-        self.mem = [0] * 256
+        self.mem = [0] * 1024
         self.bytes_per_word = int(datawidth / 8)
         self.addr_shamt = int(math.log2(self.bytes_per_word))
         self.maxint = (1 << datawidth) - 1
@@ -54,10 +54,11 @@ class Mem():
         return word
 
     def write_word(self, addr, data, mask):
-        tmp_data = self.mem[addr >> self.addr_shamt]
+        old_data = self.mem[addr >> self.addr_shamt]
+        tmp_data = 0
         for i in reversed(range(self.bytes_per_word)):
             mask_bit = (mask & (1 << i)) >> i
-            data_byte = (data >> (i * 8)) & (0xff if mask_bit else 0x00)
+            data_byte = ((data if mask_bit else old_data) >> (i * 8)) & 0xff
             tmp_data = tmp_data | (data_byte << (i * 8))
         logger.info(f"Wrote [0x{addr:016x}] 0b{mask:08b} 0x{tmp_data:016x}")
         self.mem[addr >> self.addr_shamt] = tmp_data
@@ -84,17 +85,29 @@ class Mem():
             await dut.clk_i.rising_edge
             if dut.datamem_valid_o.value == 1:
                 req_addr = int(dut.datamem_addr_o.value)
-                dut.datamem_rdata_i.value = self.read_word(req_addr)
-                if dut.datamem_wmask_o.value != 0:
-                    wdata = int(dut.datamem_wdata_o.value)
+                if req_addr == 0x10000000 and dut.datamem_wmask_o.value != 0:
+                    tmp_buf = ""
+                    data = int(dut.datamem_wdata_o.value)
                     mask = int(dut.datamem_wmask_o.value)
-                    self.write_word(req_addr, wdata, mask)
+                    for i in reversed(range(self.bytes_per_word)):
+                        mask_bit = (mask & (1 << i)) >> i
+                        if mask_bit:
+                            data_byte = (data >> (i * 8)) & (0xff if mask_bit else 0x00)
+                            tmp_buf += chr(data_byte)
+                    logger.info(f"core says: {tmp_buf}")
+                    logger.info(f"Wrote [0x{req_addr:016x}] 0b{mask:08b} 0x{data:016x}")
+                else:
+                    dut.datamem_rdata_i.value = self.read_word(req_addr)
+                    if dut.datamem_wmask_o.value != 0:
+                        wdata = int(dut.datamem_wdata_o.value)
+                        mask = int(dut.datamem_wmask_o.value)
+                        self.write_word(req_addr, wdata, mask)
                 dut.datamem_rvalid_i.value = 1
             else:
                 dut.datamem_rvalid_i.value = 0
 
 async def run_program(dut, filepath, check_mem=None):
-    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "asm", filepath))
+    filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "sim_build", filepath))
     instmem = Mem(64, filepath)
     instmem.dump_mem()
 
@@ -268,3 +281,9 @@ async def test_zicnt(dut):
     assert dut.reg_inst.regs_q[2].get() != 16
     assert dut.reg_inst.regs_q[3].get() != 16
     assert dut.reg_inst.regs_q[4].get() == 16
+
+@cocotb.test()
+async def test_c(dut):
+    def check_mem(mem):
+        assert mem[64] == 0x42
+    await run_program(dut, "test.bin", check_mem)

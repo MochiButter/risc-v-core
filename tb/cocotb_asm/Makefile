@@ -3,7 +3,7 @@ WAVES ?= 1
 
 TOPLEVEL_LANG := verilog
 ifeq ($(SIM), verilator)
-EXTRA_ARGS = --trace --trace-fst --trace-structs
+EXTRA_ARGS = --trace --trace-fst --trace-structs -DRISCV_FORMAL
 endif
 
 ROOT_DIR := $(PWD)/../..
@@ -26,14 +26,17 @@ COCOTB_TOPLEVEL = core
 
 COCOTB_TEST_MODULES = test_asm
 
-CUSTOM_SIM_DEPS = $(patsubst %.s,%.bin,$(wildcard asm/*.s))
+CUSTOM_SIM_DEPS = $(patsubst asm/%.s,sim_build/%.bin,$(wildcard asm/*.s)) $(patsubst src/%.c,sim_build/%.bin,$(wildcard src/*.c))
 
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
-%.bin: %.elf
+sim_build/%.bin: sim_build/%.elf
 	$(RISCV_TOOLCHAIN)objcopy -O binary $< $@
 
-%.elf: %.s
+sim_build/%.elf: asm/%.s
 	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
+
+sim_build/%.elf: src/%.c src/boot.s
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles -nostdlib -mcmodel=medany -T ../generic.ld src/boot.s $< -o $@
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
@@ -45,7 +48,3 @@ lint: $(VERILOG_SOURCES)
 
 svlint: $(VERILOG_SOURCES)
 	svlint --config $(ROOT_DIR)/tb/lowrisc_style.toml $^
-
-clean_asm:
-	rm -f asm/*.bin asm/*.elf
-

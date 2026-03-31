@@ -14,7 +14,9 @@ endif
 
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 
-UVM_ROOT ?= uvm-1.2
+ifndef UVM_ROOT
+$(error Could not find $$UVM_ROOT. Please set this to the directory of UVM 2017-1.0)
+endif
 UVM_TEST ?= core_basic_test
 ASM_FILE ?= $(TB_DIR)/cocotb_asm/asm/loop.s
 

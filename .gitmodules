@@ -1,7 +1,4 @@
-[submodule "third_party/uvm-1.2"]
-	path = tb/uvm/uvm-1.2
-	url = https://github.com/verilator/verilator
-[submodule "third_party/riscv-arch-test"]
+[submodule "dv/riscof/riscv-arch-test"]
 	path = dv/riscof/riscv-arch-test
 	url = https://github.com/riscv-non-isa/riscv-arch-test
 [submodule "dv/riscv-formal/riscv-formal"]

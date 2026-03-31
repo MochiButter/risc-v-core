@@ -35,26 +35,21 @@ instruction and data memory bus agents.
 Both sequences hold a reference to the memory model in the test class.
 Requests made on each interface will read from and write to that single memory.
 
-The current termination condition is hardcoded to be when the core writes
-`0xdeadbeef` to `0x000000038`.
+The current termination condition for the base test is hardcoded to be when the
+core writes `0xdeadbeef` to `0x000000038`.
+
+For simulations running `core_test_riscof`, the simulation will terminate when
+the core writes any value to `0x80000010`.
 
 ## Running
 The testbench can be run with verilator, but a newer version must be used.
 
-Because of a bug with virtual interfaces, only versions between
-```
-Verilator 5.041 devel rev v5.040-181-ga64774726
-```
-and
-```
-Verilator 5.041 devel rev v5.040-242-g2c7476524
-```
-will work (maybe more).
+The version `Verilator 5.047 devel rev v5.046-210-g109674011 (mod)` is known to
+be working (obtained from oss-cad-suite 20260331).
 
-The modified uvm library files are also needed, which can be found
-[here](https://github.com/antmicro/uvm-verilator/tree/uvm-1.2-current-patches).
-It is set as a submodule in the `tb/uvm` directory, which can be downloaded
-with `git submodule update --init --recursive`
+Set the `UVM_ROOT` variable to the root of the UVM reference implementation.
+The UVM library can be found at
+[UVM 2017-1.0](https://accellera.org/downloads/standards/uvm)
 
 ## Acknowledgements
 This setup was based on the testbenches in the

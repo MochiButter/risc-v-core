@@ -130,7 +130,7 @@ module ram_sync_axil
     logic [AddrWidthWord - 1:0] mem_addr;
     logic req_is_write, write_ready;
 
-    assign write_ready = skid_addr_w_ready && skid_wdata_ready;
+    assign write_ready = skid_addr_w_ready && skid_wdata_ready && req_is_write;
     assign req_is_write = !s_axil_arvalid && s_axil_awvalid && s_axil_wvalid;
     assign mem_addr = req_is_write ? saved_addr_w : saved_addr_r;
 
@@ -164,4 +164,79 @@ module ram_sync_axil
   assign __unused_raddr =
     {s_axil_araddr[BusWidth - 1:AddrWidthWord + ShiftBits],
     s_axil_araddr[ShiftBits - 1:0]};
+
+`ifdef FORMAL
+  `define IS_S_AXIL
+
+  `ifdef IS_M_AXIL
+    `define M_AXIL_CHECK assert
+    `define S_AXIL_CHECK assume
+  `elsif IS_S_AXIL
+    `define M_AXIL_CHECK assume
+    `define S_AXIL_CHECK assert
+  `else
+    `define M_AXIL_CHECK assert
+    `define S_AXIL_CHECK assert
+  `endif
+
+  // require a reset at the beginning
+  always_comb assume (rst_ni == !$initstate);
+
+  // the valid signals must not go high until one clock after a reset
+  // Can't use past on the 0th cycle
+  always_ff @(posedge clk_i) begin
+    if ($rose(rst_ni)) begin
+      `M_AXIL_CHECK (!s_axil_awvalid);
+      `M_AXIL_CHECK (!s_axil_wvalid);
+      `M_AXIL_CHECK (!s_axil_arvalid);
+
+      `S_AXIL_CHECK (!s_axil_bvalid);
+      `S_AXIL_CHECK (!s_axil_rvalid);
+    end
+  end
+
+  // The initial value without a reset is not known so it is excluded from the
+  // assertions
+  // valid signals must not go low until a handshake
+  // valid data must not change until a handshake
+  always_ff @(posedge clk) begin
+    if (!$initstate && $past(rst_ni)) begin
+      if ($past(s_axil_awvalid && !s_axil_awready)) begin
+        `M_AXIL_CHECK (s_axil_awvalid);
+        `M_AXIL_CHECK ($stable(s_axil_awaddr));
+        `M_AXIL_CHECK ($stable(s_axil_awprot));
+      end
+      if ($past(s_axil_wvalid && !s_axil_wready)) begin
+        `M_AXIL_CHECK (s_axil_wvalid);
+        `M_AXIL_CHECK ($stable(s_axil_wdata));
+        `M_AXIL_CHECK ($stable(s_axil_wstrb));
+      end
+      if ($past(s_axil_arvalid && !s_axil_arready)) begin
+        `M_AXIL_CHECK (s_axil_arvalid);
+        `M_AXIL_CHECK ($stable(s_axil_araddr));
+        `M_AXIL_CHECK ($stable(s_axil_arprot));
+      end
+      if ($past(s_axil_rvalid && !s_axil_rready)) begin
+        `S_AXIL_CHECK (s_axil_rvalid);
+        `S_AXIL_CHECK ($stable(s_axil_rdata));
+        `S_AXIL_CHECK ($stable(s_axil_rresp));
+      end
+      if ($past(s_axil_bvalid && !s_axil_bready)) begin
+        `S_AXIL_CHECK (s_axil_bvalid);
+        `S_AXIL_CHECK ($stable(s_axil_bresp));
+      end
+    end
+  end
+
+  always_ff @(posedge clk_i) begin
+    if (rst_ni) begin
+      cover (s_axil_awready && s_axil_awvalid);
+      cover (s_axil_wready && s_axil_wvalid);
+      cover (s_axil_arready && s_axil_arvalid);
+      cover (s_axil_bready && s_axil_bvalid);
+      cover (s_axil_rready && s_axil_rvalid);
+    end
+  end
+
+`endif
 endmodule

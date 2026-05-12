@@ -2,6 +2,7 @@ module core
   import core_pkg::*;
   import csr_pkg::*;
   import pipeline_pkg::*;
+  #(parameter logic [Xlen - 1:0] BootAddr = '0)
   (input logic clk_i
   ,input logic rst_ni
 
@@ -86,7 +87,9 @@ module core
   assign test_mems_ebreak = (exmem_q.csr_op == OpEbreak);
   /* verilator lint_on UNUSEDSIGNAL */
 
-  fetch #() fetch_inst (
+  fetch #(
+    .BootAddr(BootAddr)
+  ) fetch_inst (
     .clk_i            (clk_i),
     .rst_ni           (rst_ni),
     .control_hazard_i (mems_control_hazard),

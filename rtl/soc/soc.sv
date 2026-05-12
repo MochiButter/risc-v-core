@@ -21,6 +21,8 @@ module soc
   logic bus_ready, bus_valid, bus_rvalid;
 
   `AXIL_LOGIC(core)
+  `AXIL_LOGIC(ram)
+  `AXIL_LOGIC(rom)
 
 `ifdef RISCV_FORMAL
   // To be used in the soc level test bench
@@ -52,7 +54,9 @@ module soc
   /* verilator lint_on UNUSEDSIGNAL */
 `endif
 
-  core #() u_core (
+  core #(
+    .BootAddr(64'h80000000)
+  ) u_core (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
     .instmem_ready_i (i_ready),
@@ -138,13 +142,51 @@ module soc
     `M_AXIL_CONN(core)
   );
 
+  axil_interconnect #(
+    .BusWidth (64),
+    .NumS     (2)
+  ) axil_interconnect (
+    .clk_i (clk_i),
+    .rst_ni (rst_ni),
+    `S_AXIL_CONN(core)
+    ,
+    .m_axil_awvalid ({ram_awvalid, rom_awvalid}),
+    .m_axil_awready ({ram_awready, rom_awready}),
+    .m_axil_awaddr  ({ram_awaddr, rom_awaddr}),
+    .m_axil_wvalid  ({ram_wvalid, rom_wvalid}),
+    .m_axil_wready  ({ram_wready, rom_wready}),
+    .m_axil_wdata   ({ram_wdata, rom_wdata}),
+    .m_axil_wstrb   ({ram_wstrb, rom_wstrb}),
+    .m_axil_bvalid  ({ram_bvalid, rom_bvalid}),
+    .m_axil_bready  ({ram_bready, rom_bready}),
+    .m_axil_arvalid ({ram_arvalid, rom_arvalid}),
+    .m_axil_arready ({ram_arready, rom_arready}),
+    .m_axil_araddr  ({ram_araddr, rom_araddr}),
+    .m_axil_rvalid  ({ram_rvalid, rom_rvalid}),
+    .m_axil_rready  ({ram_rready, rom_rready}),
+    .m_axil_rdata   ({ram_rdata, rom_rdata}),
+    .m_axil_awprot  ({ram_awprot, rom_awprot}),
+    .m_axil_bresp   ({ram_bresp, rom_bresp}),
+    .m_axil_arprot  ({ram_arprot, rom_arprot}),
+    .m_axil_rresp   ({ram_rresp, rom_rresp})
+  );
+
   ram_sync_axil #(
     .BusWidth    (64),
-    .AddrWidth   (16),
-    .DualPort    (0)
+    .AddrWidth   (15),
+    .DualPort    (1'b1)
   ) u_axil_ram (
     .clk_i  (clk_i),
     .rst_ni (rst_ni),
-    `S_AXIL_CONN(core)
+    `S_AXIL_CONN(ram)
+  );
+
+  rom_sync_axil #(
+    .BusWidth    (64),
+    .AddrWidth   (16)
+  ) u_axil_rom (
+    .clk_i  (clk_i),
+    .rst_ni (rst_ni),
+    `S_AXIL_CONN(rom)
   );
 endmodule

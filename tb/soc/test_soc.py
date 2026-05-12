@@ -48,6 +48,9 @@ def dump_axil_bus(cycle, dut):
         return ret
     return False
 
+def get_rom(dut):
+    return dut.u_axil_rom.u_mem.mem
+
 def get_mem(dut):
     dualport = dut.u_axil_ram.DualPort.value
     return dut.u_axil_ram.l_dualport.u_mem.mem if dualport else dut.u_axil_ram.l_singleport.u_mem.mem
@@ -68,7 +71,7 @@ async def run_program(dut, filepath, timeout):
     while (word):
         word_bytes = int.from_bytes(word, byteorder="little")
         bytes_la = LogicArray.from_unsigned(word_bytes, 64)
-        get_mem(dut)[cnt].set(bytes_la)
+        get_rom(dut)[cnt].set(bytes_la)
         cnt += 1
         word = program.read(8)
     program.close()
@@ -99,13 +102,14 @@ async def test_load(dut):
 async def test_store(dut):
     await run_program(dut, "store.bin", 100)
     mem = get_mem(dut)
-    assert mem[6].value  == 0xdeadbeef
-    assert mem[7].value  == 0x0000beef
-    assert mem[8].value  == 0xbeef0000
-    assert mem[9].value  == 0x000000ef
-    assert mem[10].value == 0x0000ef00
-    assert mem[11].value == 0x00ef0000
-    assert mem[12].value == 0xef000000
+    base_addr = int((dut.u_core.reg_inst.regs_q[2].get().to_unsigned() - 0x80010000) / 8)
+    assert mem[base_addr + 0].value == 0xdeadbeef
+    assert mem[base_addr + 1].value == 0x0000beef
+    assert mem[base_addr + 2].value == 0xbeef0000
+    assert mem[base_addr + 3].value == 0x000000ef
+    assert mem[base_addr + 4].value == 0x0000ef00
+    assert mem[base_addr + 5].value == 0x00ef0000
+    assert mem[base_addr + 6].value == 0xef000000
 
 @cocotb.test()
 async def test_loop(dut):
@@ -114,18 +118,23 @@ async def test_loop(dut):
     assert dut.u_core.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
     assert dut.u_core.reg_inst.regs_q[3].get().to_unsigned()  == 0xdeadbeef
     mem = get_mem(dut)
-    assert mem[7].value == 0xdeadbeef
+    base_addr = int((dut.u_core.reg_inst.regs_q[4].get().to_unsigned() - 0x80010000) / 8)
+    assert mem[base_addr].value == 0xdeadbeef
 
 @cocotb.test()
 async def test_misalign(dut):
     await run_program(dut, "misalign.bin", 150)
     assert dut.u_core.reg_inst.regs_q[31].get() == 2
     mem = get_mem(dut)
-    assert mem[128].value == 0
-    assert mem[129].value == 4
-    assert mem[130].value == 6
+    base_addr = int((dut.u_core.reg_inst.regs_q[5].get().to_unsigned() - 0x80010000) / 8)
+    assert mem[base_addr + 0].value == 0
+    assert mem[base_addr + 1].value == 4
+    assert mem[base_addr + 2].value == 6
 
 @cocotb.test()
 async def test_fencei(dut):
     await run_program(dut, "fencei.bin", 50)
-    assert dut.u_core.reg_inst.regs_q[1].get() == 0x42
+    # unlike the cocotb test, writing to the rom will not work
+    # ideally this test will also test the SLVERR, but the core's memory
+    # interface doesn't have that signal right now
+    # assert dut.u_core.reg_inst.regs_q[1].get() == 0x42

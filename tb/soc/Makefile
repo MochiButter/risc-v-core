@@ -19,6 +19,7 @@ VERILOG_SOURCES += $(ROOT_DIR)/rtl/core.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/decode.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/ram_1r1w_sync.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/ram_1rw_sync.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/rom_1r_sync.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/fifo.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/fetch.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/mem_lsu.sv
@@ -32,6 +33,9 @@ VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/axil_if.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/arbiter.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/mem_to_axil.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/ram_sync_axil.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/rom_sync_axil.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/addr_decode.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/axil_interconnect.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/soc.sv
 
 COCOTB_TOPLEVEL := soc
@@ -46,7 +50,7 @@ RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 
 sim_build/%.elf: ../cocotb_asm/asm/%.s
 	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles \
-		-nostdlib -mcmodel=medany -T ../generic.ld $< -o $@
+		-nostdlib -mcmodel=medany -T soc.ld $< -o $@
 
 sim_build/%.hex: sim_build/%.elf
 	$(RISCV_TOOLCHAIN)objcopy -O verilog --verilog-data-width=8 $< $@
@@ -59,3 +63,6 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 lint: $(VERILOG_SOURCES)
 	verilator $(ROOT_DIR)/tb/verilator.vlt --lint-only --timing \
 		-top $(COCOTB_TOPLEVEL) -DRISCV_FORMAL $^ -Wall
+
+svlint: $(VERILOG_SOURCES)
+	svlint --config $(ROOT_DIR)/tb/lowrisc_style.toml $^

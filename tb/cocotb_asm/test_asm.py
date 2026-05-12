@@ -18,7 +18,7 @@ class Mem():
     addr_shamt = 2
 
     def __init__(self, datawidth, path=None):
-        self.mem = [0] * 1024
+        self.mem = [0] * 2048
         self.bytes_per_word = int(datawidth / 8)
         self.addr_shamt = int(math.log2(self.bytes_per_word))
         self.maxint = (1 << datawidth) - 1
@@ -187,13 +187,14 @@ async def test_load(dut):
 @cocotb.test()
 async def test_store(dut):
     def check_mem(mem):
-        assert mem[6] == 0xdeadbeef
-        assert mem[7] == 0x0000beef
-        assert mem[8] == 0xbeef0000
-        assert mem[9] == 0x000000ef
-        assert mem[10] == 0x0000ef00
-        assert mem[11] == 0x00ef0000
-        assert mem[12] == 0xef000000
+        base_addr = int(dut.reg_inst.regs_q[2].get().to_unsigned() / 8)
+        assert mem[base_addr + 0] == 0xdeadbeef
+        assert mem[base_addr + 1] == 0x0000beef
+        assert mem[base_addr + 2] == 0xbeef0000
+        assert mem[base_addr + 3] == 0x000000ef
+        assert mem[base_addr + 4] == 0x0000ef00
+        assert mem[base_addr + 5] == 0x00ef0000
+        assert mem[base_addr + 6] == 0xef000000
     await run_program(dut, "store.bin", check_mem)
 
 @cocotb.test()
@@ -213,7 +214,8 @@ async def test_extra(dut):
 @cocotb.test()
 async def test_loop(dut):
     def check_mem(mem):
-        assert mem[7] == 0xdeadbeef
+        base_addr = int(dut.reg_inst.regs_q[4].get().to_unsigned() / 8)
+        assert mem[base_addr] == 0xdeadbeef
     await run_program(dut, "loop.bin", check_mem)
     assert dut.reg_inst.regs_q[1].get().to_unsigned()  == 0x00000072
     assert dut.reg_inst.regs_q[2].get().to_unsigned()  == 0x00000064
@@ -263,9 +265,10 @@ async def test_trap_illegal(dut):
 @cocotb.test()
 async def test_misalign(dut):
     def check_mem(mem):
-        assert mem[128] == 0
-        assert mem[129] == 4
-        assert mem[130] == 6
+        base_addr = int(dut.reg_inst.regs_q[5].get().to_unsigned() / 8)
+        assert mem[base_addr + 0] == 0
+        assert mem[base_addr + 1] == 4
+        assert mem[base_addr + 2] == 6
     await run_program(dut, "misalign.bin", check_mem)
     assert dut.reg_inst.regs_q[31].get() == 2
 

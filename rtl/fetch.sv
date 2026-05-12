@@ -1,4 +1,5 @@
 module fetch import core_pkg::*;
+  #(parameter logic [Xlen - 1:0] BootAddr = '0)
   (input logic clk_i
   ,input logic rst_ni
 

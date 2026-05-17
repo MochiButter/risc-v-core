@@ -138,3 +138,7 @@ async def test_fencei(dut):
     # ideally this test will also test the SLVERR, but the core's memory
     # interface doesn't have that signal right now
     # assert dut.u_core.reg_inst.regs_q[1].get() == 0x42
+
+@cocotb.test()
+async def test_aclint(dut):
+    await run_program(dut, "aclint.bin", 150)

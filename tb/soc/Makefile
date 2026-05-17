@@ -36,12 +36,16 @@ VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/ram_sync_axil.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/rom_sync_axil.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/addr_decode.sv
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/axil_interconnect.sv
+
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/aclint/aclint.sv
+VERILOG_SOURCES += $(ROOT_DIR)/rtl/aclint/axil_aclint.sv
+
 VERILOG_SOURCES += $(ROOT_DIR)/rtl/soc/soc.sv
 
 COCOTB_TOPLEVEL := soc
 COCOTB_TEST_MODULES := test_soc
 
-TEST_FILES := load store loop misalign fencei
+TEST_FILES := load store loop misalign fencei aclint
 CUSTOM_SIM_DEPS := $(foreach test,$(TEST_FILES),sim_build/$(test).bin)
 
 RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
@@ -49,6 +53,10 @@ RISCV_TOOLCHAIN ?= riscv64-unknown-elf-
 .PHONY: lint
 
 sim_build/%.elf: ../cocotb_asm/asm/%.s
+	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles \
+		-nostdlib -mcmodel=medany -T soc.ld $< -o $@
+
+sim_build/%.elf: asm/%.s
 	$(RISCV_TOOLCHAIN)gcc -march=rv64i_zicsr_zifencei -mabi=lp64 -nostartfiles \
 		-nostdlib -mcmodel=medany -T soc.ld $< -o $@
 
